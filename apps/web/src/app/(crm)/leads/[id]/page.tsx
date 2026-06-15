@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { MessageSquarePlus, Pencil, UserRoundCheck } from "lucide-react";
+import { Braces, MessageSquarePlus, Pencil, UserRoundCheck } from "lucide-react";
 import { Button } from "@crm-pro-ai/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@crm-pro-ai/ui/card";
 import { createConversation, convertLeadToContact } from "@/app/actions/crm";
 import { assignSmartTag } from "@/app/actions/smart-tags";
+import { extractLeadVariables } from "@/app/actions/variables";
 import { requireUser } from "@/lib/auth";
 import { getActiveOrganization } from "@/lib/organization";
 
@@ -27,11 +28,23 @@ type SmartTagOption = {
   color: string;
 };
 
+type LeadVariableRow = {
+  value: unknown;
+  confidence: number | null;
+  extracted_at: string;
+  variables: {
+    id: string;
+    name: string;
+    key: string;
+    type: string;
+  } | null;
+};
+
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { supabase, user } = await requireUser();
   const organization = await getActiveOrganization(supabase, user);
-  const [{ data: lead }, { data: smartTags }, { data: assignedTags }] = await Promise.all([
+  const [{ data: lead }, { data: smartTags }, { data: assignedTags }, { data: leadVariables }] = await Promise.all([
     supabase
       .from("leads")
       .select("id, first_name, last_name, email, phone, company, source, status, owner_id, notes, contact_id")
@@ -50,7 +63,13 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
       .select("tags(id, name, color)")
       .eq("organization_id", organization.id)
       .eq("lead_id", id)
-      .returns<Array<{ tags: SmartTagOption | null }>>()
+      .returns<Array<{ tags: SmartTagOption | null }>>(),
+    supabase
+      .from("lead_variables")
+      .select("value, confidence, extracted_at, variables(id, name, key, type)")
+      .eq("organization_id", organization.id)
+      .eq("lead_id", id)
+      .returns<LeadVariableRow[]>()
   ]);
 
   if (!lead) {
@@ -141,6 +160,32 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
           </form>
         </CardContent>
       </Card>
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle>Variables Inteligentes</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <form action={extractLeadVariables}>
+            <input type="hidden" name="lead_id" value={lead.id} />
+            <Button type="submit" variant="outline">
+              <Braces className="size-4" />
+              Actualizar variables con IA
+            </Button>
+          </form>
+          <div className="grid gap-3 md:grid-cols-2">
+            {(leadVariables ?? []).map((item) =>
+              item.variables ? (
+                <div key={item.variables.id} className="rounded-md border p-3 text-sm">
+                  <p className="font-medium">{item.variables.name}</p>
+                  <p className="text-muted-foreground">{formatVariableValue(item.value)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">confidence {item.confidence ?? 0}</p>
+                </div>
+              ) : null,
+            )}
+            {leadVariables?.length === 0 ? <p className="text-sm text-muted-foreground">Sin variables extraidas.</p> : null}
+          </div>
+        </CardContent>
+      </Card>
     </section>
   );
 }
@@ -154,4 +199,9 @@ function InfoCard({ title, value }: { title: string; value: string }) {
       <CardContent className="font-medium">{value}</CardContent>
     </Card>
   );
+}
+
+function formatVariableValue(value: unknown) {
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value);
+  return JSON.stringify(value);
 }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bot, Search, SendHorizontal, Sparkles, Tags } from "lucide-react";
+import { Bot, Braces, Search, SendHorizontal, Sparkles, Tags } from "lucide-react";
 import {
   conversationAiStatuses,
   conversationChannels,
@@ -10,6 +10,7 @@ import { Input } from "@crm-pro-ai/ui/input";
 import { createMessage, updateConversation } from "@/app/actions/crm";
 import { suggestConversationReply } from "@/app/actions/ai";
 import { analyzeConversationSmartTags, assignSmartTag } from "@/app/actions/smart-tags";
+import { extractConversationVariables } from "@/app/actions/variables";
 import { requireUser } from "@/lib/auth";
 import { getActiveOrganization, getAssignableMembers } from "@/lib/organization";
 import { RealtimeRefresh } from "./_components/realtime-refresh";
@@ -58,6 +59,7 @@ export default async function InboxPage({
     ai_log?: string;
     tags?: string;
     paused?: string;
+    variables?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -119,6 +121,21 @@ export default async function InboxPage({
         .eq("organization_id", organization.id)
         .eq("conversation_id", selected.id)
         .returns<Array<{ tags: { id: string; name: string; color: string } | null }>>()
+    : { data: [] };
+  const { data: conversationVariables } = selected
+    ? await supabase
+        .from("conversation_variables")
+        .select("value, confidence, extracted_at, variables(id, name, key, type)")
+        .eq("organization_id", organization.id)
+        .eq("conversation_id", selected.id)
+        .returns<
+          Array<{
+            value: unknown;
+            confidence: number | null;
+            extracted_at: string;
+            variables: { id: string; name: string; key: string; type: string } | null;
+          }>
+        >()
     : { data: [] };
   const { data: aiSuggestion } = params.ai_log
     ? await supabase
@@ -253,6 +270,11 @@ export default async function InboxPage({
                       {params.tags} tags detectados{params.paused === "1" ? " · IA pausada" : ""}
                     </span>
                   ) : null}
+                  {params.variables ? (
+                    <span className="rounded-md bg-emerald-50 px-2 py-1 text-xs text-emerald-700">
+                      {params.variables} variables extraidas
+                    </span>
+                  ) : null}
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <form action={analyzeConversationSmartTags}>
@@ -275,7 +297,26 @@ export default async function InboxPage({
                     </select>
                     <Button type="submit" size="sm" variant="outline">Asignar</Button>
                   </form>
+                  <form action={extractConversationVariables}>
+                    <input type="hidden" name="conversation_id" value={selected.id} />
+                    <Button type="submit" size="sm" variant="outline">
+                      <Braces className="size-4" />
+                      Extraer variables con IA
+                    </Button>
+                  </form>
                 </div>
+                {(conversationVariables ?? []).length > 0 ? (
+                  <div className="mt-3 grid gap-2 md:grid-cols-2">
+                    {(conversationVariables ?? []).map((item) =>
+                      item.variables ? (
+                        <div key={item.variables.id} className="rounded-md border bg-background px-3 py-2 text-xs">
+                          <p className="font-medium">{item.variables.name}</p>
+                          <p className="text-muted-foreground">{formatVariableValue(item.value)} · {item.confidence ?? 0}</p>
+                        </div>
+                      ) : null,
+                    )}
+                  </div>
+                ) : null}
               </div>
               <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-5">
                 {(messages ?? []).map((message) => (
@@ -350,4 +391,9 @@ function conversationName(conversation: ConversationRow) {
 
 function conversationPhone(conversation: ConversationRow) {
   return conversation.contacts?.phone ?? conversation.leads?.phone;
+}
+
+function formatVariableValue(value: unknown) {
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value);
+  return JSON.stringify(value);
 }
