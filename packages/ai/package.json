@@ -5,6 +5,8 @@
   "type": "module",
   "exports": {
     "./assistant": "./src/assistant.ts",
-    "./orchestrator": "./src/orchestrator.ts"
+    "./orchestrator": "./src/orchestrator.ts",
+    "./smart-tags": "./src/smart-tags.ts",
+    "./smart-tag-classifier": "./src/smart-tag-classifier.ts"
   }
 }
