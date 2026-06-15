@@ -11,8 +11,11 @@ import {
   leadUpdateSchema,
   messageInputSchema
 } from "@crm-pro-ai/database/crm";
+import { WhatsAppCloudService } from "@crm-pro-ai/integrations/whatsapp-cloud-service";
 import { requireUser } from "@/lib/auth";
+import { getServerEnv } from "@/lib/env";
 import { getActiveOrganization } from "@/lib/organization";
+import { z } from "zod";
 
 function value(formData: FormData, key: string) {
   const formValue = formData.get(key);
@@ -45,6 +48,14 @@ function contactPayload(formData: FormData) {
     notes: value(formData, "notes")
   };
 }
+
+const whatsappSettingsSchema = z.object({
+  phone_number_id: z.string().trim().min(3).max(80),
+  business_account_id: z.string().trim().max(80).optional().transform((value) => value || null),
+  display_phone_number: z.string().trim().max(40).optional().transform((value) => value || null),
+  webhook_verify_token_hint: z.string().trim().max(120).optional().transform((value) => value || null),
+  enabled: z.boolean().default(false)
+});
 
 export async function createLead(formData: FormData) {
   const parsed = leadInputSchema.safeParse(leadPayload(formData));
@@ -256,23 +267,168 @@ export async function createMessage(formData: FormData) {
   const organization = await getActiveOrganization(supabase, user);
   const { data: conversation } = await supabase
     .from("conversations")
-    .select("id, organization_id")
+    .select("id, organization_id, channel, contacts(phone), leads(phone)")
     .eq("id", parsed.data.conversation_id)
     .eq("organization_id", organization.id)
-    .single();
+    .single<{
+      id: string;
+      organization_id: string;
+      channel: string;
+      contacts: { phone: string | null } | null;
+      leads: { phone: string | null } | null;
+    }>();
 
   if (!conversation) redirect("/inbox?error=missing-conversation");
 
-  const { error } = await supabase.from("messages").insert({
-    ...parsed.data,
-    organization_id: organization.id,
-    sender_type: parsed.data.direction === "outbound" ? "user" : "contact",
-    sender_user_id: parsed.data.direction === "outbound" ? user.id : null,
-    metadata: {}
-  });
+  const initialStatus = conversation.channel === "whatsapp" ? "pending" : parsed.data.status;
+  const { data: createdMessage, error } = await supabase
+    .from("messages")
+    .insert({
+      ...parsed.data,
+      status: initialStatus,
+      organization_id: organization.id,
+      sender_type: parsed.data.direction === "outbound" ? "user" : "contact",
+      sender_user_id: parsed.data.direction === "outbound" ? user.id : null,
+      metadata: {}
+    })
+    .select("id")
+    .single<{ id: string }>();
 
-  if (error) redirect(`/inbox?conversation=${conversation.id}&error=create-message`);
+  if (error || !createdMessage) redirect(`/inbox?conversation=${conversation.id}&error=create-message`);
+
+  if (conversation.channel === "whatsapp" && parsed.data.direction === "outbound") {
+    await sendWhatsAppMessage({
+      body: parsed.data.body,
+      conversation,
+      messageId: createdMessage.id,
+      organizationId: organization.id
+    });
+  }
 
   revalidatePath("/inbox");
   redirect(`/inbox?conversation=${conversation.id}`);
+}
+
+export async function saveWhatsAppSettings(formData: FormData) {
+  const parsed = whatsappSettingsSchema.safeParse({
+    phone_number_id: value(formData, "phone_number_id"),
+    business_account_id: value(formData, "business_account_id"),
+    display_phone_number: value(formData, "display_phone_number"),
+    webhook_verify_token_hint: value(formData, "webhook_verify_token_hint"),
+    enabled: formData.get("enabled") === "on"
+  });
+
+  if (!parsed.success) redirect("/settings/channels/whatsapp?error=invalid");
+
+  const { supabase, user } = await requireUser();
+  const organization = await getActiveOrganization(supabase, user);
+  const { error } = await supabase.from("whatsapp_channel_settings").upsert(
+    {
+      ...parsed.data,
+      organization_id: organization.id
+    },
+    {
+      onConflict: "organization_id,phone_number_id"
+    },
+  );
+
+  if (error) redirect("/settings/channels/whatsapp?error=save");
+
+  revalidatePath("/settings/channels/whatsapp");
+  redirect("/settings/channels/whatsapp?saved=1");
+}
+
+async function sendWhatsAppMessage({
+  body,
+  conversation,
+  messageId,
+  organizationId
+}: {
+  body: string;
+  conversation: {
+    id: string;
+    contacts: { phone: string | null } | null;
+    leads: { phone: string | null } | null;
+  };
+  messageId: string;
+  organizationId: string;
+}) {
+  const { supabase } = await requireUser();
+  const env = getServerEnv();
+  const recipient = conversation.contacts?.phone ?? conversation.leads?.phone;
+  const { data: setting } = await supabase
+    .from("whatsapp_channel_settings")
+    .select("phone_number_id, enabled")
+    .eq("organization_id", organizationId)
+    .eq("enabled", true)
+    .limit(1)
+    .maybeSingle<{ phone_number_id: string; enabled: boolean }>();
+
+  if (!recipient || !setting || !env.WHATSAPP_ACCESS_TOKEN) {
+    await supabase
+      .from("messages")
+      .update({
+        status: "failed",
+        metadata: { error: "WhatsApp is not configured or recipient phone is missing." }
+      })
+      .eq("id", messageId)
+      .eq("organization_id", organizationId);
+    return;
+  }
+
+  const service = new WhatsAppCloudService({
+    accessToken: env.WHATSAPP_ACCESS_TOKEN,
+    phoneNumberId: setting.phone_number_id,
+    graphApiVersion: env.WHATSAPP_GRAPH_API_VERSION,
+    appSecret: env.WHATSAPP_APP_SECRET
+  });
+
+  try {
+    const response = await service.sendText({ to: recipient, body });
+    const externalMessageId = response.messages?.[0]?.id;
+
+    await supabase
+      .from("messages")
+      .update({
+        status: "sent",
+        external_message_id: externalMessageId,
+        metadata: { whatsapp_response: response }
+      })
+      .eq("id", messageId)
+      .eq("organization_id", organizationId);
+
+    await supabase.from("whatsapp_events").insert({
+      organization_id: organizationId,
+      direction: "outbound",
+      event_type: "text",
+      whatsapp_message_id: externalMessageId,
+      conversation_id: conversation.id,
+      message_id: messageId,
+      phone_number_id: setting.phone_number_id,
+      contact_wa_id: recipient,
+      payload: response
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown WhatsApp error";
+    await supabase
+      .from("messages")
+      .update({
+        status: "failed",
+        metadata: { error: errorMessage }
+      })
+      .eq("id", messageId)
+      .eq("organization_id", organizationId);
+
+    await supabase.from("whatsapp_events").insert({
+      organization_id: organizationId,
+      direction: "error",
+      event_type: "send_failed",
+      conversation_id: conversation.id,
+      message_id: messageId,
+      phone_number_id: setting.phone_number_id,
+      contact_wa_id: recipient,
+      payload: {},
+      error_message: errorMessage
+    });
+  }
 }
