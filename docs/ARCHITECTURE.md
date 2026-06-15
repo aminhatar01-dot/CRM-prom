@@ -29,3 +29,15 @@ La fase 2 agrega el nucleo conversacional:
 - Server Actions: validan con Zod y escriben usando la sesion del usuario.
 
 WhatsApp real e IA real quedan preparados, pero no implementados en esta fase.
+
+## FASE 3
+
+La fase 3 conecta WhatsApp Cloud API:
+
+- `GET /api/webhooks/whatsapp`: verificacion Meta.
+- `POST /api/webhooks/whatsapp`: recepcion de mensajes/statuses.
+- `WhatsAppCloudService`: cliente server-side para Graph API.
+- `whatsapp_channel_settings`: configuracion por organizacion.
+- `whatsapp_events`: bitacora de payloads recibidos, enviados y errores.
+
+Los webhooks usan service role exclusivamente en servidor porque no hay sesion de usuario en llamadas de Meta.

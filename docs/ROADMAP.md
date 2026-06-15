@@ -18,14 +18,15 @@
 - Realtime para CRM conversacional.
 - Seeds y tests base.
 
-## Siguiente
-
 ### FASE 3
 
 - WhatsApp Cloud API Sandbox.
-- Webhooks GET/POST.
-- Normalizacion de mensajes entrantes.
-- Registro de payloads y errores.
+- Webhook GET/POST.
+- Recepcion de mensajes y statuses.
+- Envio manual de texto desde Inbox.
+- Persistencia de eventos WhatsApp.
+
+## Siguiente
 
 ### FASE 4
 

@@ -75,3 +75,32 @@ La migracion FASE 2 agrega `enforce_crm_tenant_integrity()` para evitar referenc
 - `lead_tags.lead_id`
 - `lead_tags.tag_id`
 - `owner_id` operativo
+
+## WhatsApp FASE 3
+
+### `whatsapp_channel_settings`
+
+Configuracion por organizacion:
+
+- `organization_id`
+- `phone_number_id`
+- `business_account_id`
+- `display_phone_number`
+- `webhook_verify_token_hint`
+- `enabled`
+
+### `whatsapp_events`
+
+Persistencia de eventos:
+
+- `direction`: `inbound`, `outbound`, `status`, `error`
+- `event_type`
+- `whatsapp_message_id`
+- `conversation_id`
+- `message_id`
+- `phone_number_id`
+- `contact_wa_id`
+- `payload`
+- `error_message`
+
+Ambas tablas tienen RLS por `organization_id`.

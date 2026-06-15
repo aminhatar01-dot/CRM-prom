@@ -19,6 +19,15 @@ SaaS CRM multi tenant construido con Next.js 15, Supabase y OpenAI.
 - Inbox base tipo WhatsApp Web con filtros y Supabase Realtime.
 - Seeds demo para CRM conversacional.
 
+## FASE 3
+
+- Webhook oficial de WhatsApp Cloud API.
+- Recepcion de mensajes texto, imagen, audio, documento y ubicacion.
+- Envio manual de texto desde Inbox para conversaciones WhatsApp.
+- Persistencia de eventos, payloads y errores.
+- Settings > Channels > WhatsApp.
+- Validacion de firma HMAC opcional con `WHATSAPP_APP_SECRET`.
+
 ## Validacion
 
 ```bash
@@ -27,4 +36,4 @@ npm run build
 npm run test
 ```
 
-Consulta [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATABASE.md](docs/DATABASE.md), [docs/ROADMAP.md](docs/ROADMAP.md), [docs/PHASE_2_VALIDATION.md](docs/PHASE_2_VALIDATION.md) y [docs/supabase-setup.md](docs/supabase-setup.md).
+Consulta [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATABASE.md](docs/DATABASE.md), [docs/ROADMAP.md](docs/ROADMAP.md), [docs/WHATSAPP_SETUP.md](docs/WHATSAPP_SETUP.md), [docs/PHASE_3_VALIDATION.md](docs/PHASE_3_VALIDATION.md) y [docs/supabase-setup.md](docs/supabase-setup.md).

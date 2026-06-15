@@ -101,3 +101,21 @@ values
   ('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000303', 'outbound', 'user', 'Retomo la conversacion y dejo IA pausada.', 'manual', 'sent', '{}', now() - interval '30 minutes'),
   ('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000304', 'inbound', 'contact', 'Gracias, lo revisamos luego.', 'whatsapp', 'read', '{}', now() - interval '20 minutes'),
   ('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000305', 'inbound', 'contact', 'Necesito integrar mis leads.', 'manual', 'pending', '{}', now() - interval '10 minutes');
+
+insert into public.whatsapp_channel_settings (
+  organization_id,
+  phone_number_id,
+  business_account_id,
+  display_phone_number,
+  webhook_verify_token_hint,
+  enabled
+)
+values (
+  '00000000-0000-4000-8000-000000000001',
+  'demo-phone-number-id',
+  'demo-business-account-id',
+  '+54 9 11 0000-0000',
+  'demo-token-hint',
+  false
+)
+on conflict (organization_id, phone_number_id) do nothing;
