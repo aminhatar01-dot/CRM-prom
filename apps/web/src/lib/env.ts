@@ -11,7 +11,13 @@ const serverEnvSchema = publicEnvSchema.extend({
   WHATSAPP_ACCESS_TOKEN: z.string().min(1).optional(),
   WHATSAPP_PHONE_NUMBER_ID: z.string().min(1).optional(),
   WHATSAPP_APP_SECRET: z.string().min(1).optional(),
-  WHATSAPP_GRAPH_API_VERSION: z.string().min(1).default("v23.0")
+  WHATSAPP_GRAPH_API_VERSION: z.string().min(1).default("v23.0"),
+  OPENAI_API_KEY: z.string().min(1).optional(),
+  OPENAI_MODEL: z.string().min(1).default("gpt-5.5"),
+  AI_DEMO_MODE: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((value) => value === "true")
 });
 
 export function getPublicEnv() {
@@ -30,6 +36,9 @@ export function getServerEnv() {
     WHATSAPP_ACCESS_TOKEN: process.env.WHATSAPP_ACCESS_TOKEN,
     WHATSAPP_PHONE_NUMBER_ID: process.env.WHATSAPP_PHONE_NUMBER_ID,
     WHATSAPP_APP_SECRET: process.env.WHATSAPP_APP_SECRET,
-    WHATSAPP_GRAPH_API_VERSION: process.env.WHATSAPP_GRAPH_API_VERSION
+    WHATSAPP_GRAPH_API_VERSION: process.env.WHATSAPP_GRAPH_API_VERSION,
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    OPENAI_MODEL: process.env.OPENAI_MODEL,
+    AI_DEMO_MODE: process.env.AI_DEMO_MODE
   });
 }

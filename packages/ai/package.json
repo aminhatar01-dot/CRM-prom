@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./assistant": "./src/assistant.ts"
+    "./assistant": "./src/assistant.ts",
+    "./orchestrator": "./src/orchestrator.ts"
   }
 }
