@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bot, Search, SendHorizontal, Sparkles } from "lucide-react";
+import { Bot, Search, SendHorizontal, Sparkles, Tags } from "lucide-react";
 import {
   conversationAiStatuses,
   conversationChannels,
@@ -9,6 +9,7 @@ import { Button } from "@crm-pro-ai/ui/button";
 import { Input } from "@crm-pro-ai/ui/input";
 import { createMessage, updateConversation } from "@/app/actions/crm";
 import { suggestConversationReply } from "@/app/actions/ai";
+import { analyzeConversationSmartTags, assignSmartTag } from "@/app/actions/smart-tags";
 import { requireUser } from "@/lib/auth";
 import { getActiveOrganization, getAssignableMembers } from "@/lib/organization";
 import { RealtimeRefresh } from "./_components/realtime-refresh";
@@ -55,6 +56,8 @@ export default async function InboxPage({
     status?: string;
     owner?: string;
     ai_log?: string;
+    tags?: string;
+    paused?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -102,6 +105,21 @@ export default async function InboxPage({
     .eq("active", true)
     .order("created_at", { ascending: false })
     .returns<{ id: string; name: string }[]>();
+  const { data: smartTags } = await supabase
+    .from("tags")
+    .select("id, name, color")
+    .eq("organization_id", organization.id)
+    .eq("active", true)
+    .order("name")
+    .returns<{ id: string; name: string; color: string }[]>();
+  const { data: selectedTags } = selected
+    ? await supabase
+        .from("conversation_smart_tags")
+        .select("tags(id, name, color)")
+        .eq("organization_id", organization.id)
+        .eq("conversation_id", selected.id)
+        .returns<Array<{ tags: { id: string; name: string; color: string } | null }>>()
+    : { data: [] };
   const { data: aiSuggestion } = params.ai_log
     ? await supabase
         .from("ai_logs")
@@ -221,6 +239,43 @@ export default async function InboxPage({
                     <p>{aiSuggestion.output}</p>
                   </div>
                 ) : null}
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {(selectedTags ?? []).map((item) =>
+                    item.tags ? (
+                      <span key={item.tags.id} className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs">
+                        <span className="size-2 rounded-full" style={{ backgroundColor: item.tags.color }} />
+                        {item.tags.name}
+                      </span>
+                    ) : null,
+                  )}
+                  {params.tags ? (
+                    <span className="rounded-md bg-emerald-50 px-2 py-1 text-xs text-emerald-700">
+                      {params.tags} tags detectados{params.paused === "1" ? " · IA pausada" : ""}
+                    </span>
+                  ) : null}
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <form action={analyzeConversationSmartTags}>
+                    <input type="hidden" name="conversation_id" value={selected.id} />
+                    <Button type="submit" size="sm" variant="outline">
+                      <Tags className="size-4" />
+                      Analizar tags con IA
+                    </Button>
+                  </form>
+                  <form action={assignSmartTag} className="flex items-center gap-2">
+                    <input type="hidden" name="conversation_id" value={selected.id} />
+                    <input type="hidden" name="return_to" value={`/inbox?conversation=${selected.id}`} />
+                    <select name="tag_id" className="h-9 rounded-md border bg-background px-2 text-xs" required>
+                      <option value="">Asignar tag</option>
+                      {(smartTags ?? []).map((tag) => (
+                        <option key={tag.id} value={tag.id}>
+                          {tag.name}
+                        </option>
+                      ))}
+                    </select>
+                    <Button type="submit" size="sm" variant="outline">Asignar</Button>
+                  </form>
+                </div>
               </div>
               <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-5">
                 {(messages ?? []).map((message) => (
