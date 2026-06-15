@@ -44,6 +44,14 @@ SaaS CRM multi tenant construido con Next.js 15, Supabase y OpenAI.
 - Logs y auditoria de clasificacion.
 - Auto pause de IA cuando el tag lo requiere.
 
+## FASE 6
+
+- CRUD de Variables Inteligentes.
+- Extraccion demo desde Inbox y ficha de lead.
+- Valores por lead y conversacion.
+- Logs de extraccion con confidence y source message.
+- Validacion por tipo y upsert sin duplicados.
+
 ## Validacion
 
 ```bash
@@ -52,4 +60,4 @@ npm run build
 npm run test
 ```
 
-Consulta [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATABASE.md](docs/DATABASE.md), [docs/ROADMAP.md](docs/ROADMAP.md), [docs/AI_ORCHESTRATION.md](docs/AI_ORCHESTRATION.md), [docs/SMART_TAGS.md](docs/SMART_TAGS.md), [docs/PHASE_5_VALIDATION.md](docs/PHASE_5_VALIDATION.md), [docs/WHATSAPP_SETUP.md](docs/WHATSAPP_SETUP.md) y [docs/supabase-setup.md](docs/supabase-setup.md).
+Consulta [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATABASE.md](docs/DATABASE.md), [docs/ROADMAP.md](docs/ROADMAP.md), [docs/AI_ORCHESTRATION.md](docs/AI_ORCHESTRATION.md), [docs/SMART_TAGS.md](docs/SMART_TAGS.md), [docs/VARIABLES.md](docs/VARIABLES.md), [docs/PHASE_6_VALIDATION.md](docs/PHASE_6_VALIDATION.md), [docs/WHATSAPP_SETUP.md](docs/WHATSAPP_SETUP.md) y [docs/supabase-setup.md](docs/supabase-setup.md).

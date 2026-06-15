@@ -171,3 +171,54 @@ values (
   false
 )
 on conflict (id) do nothing;
+
+insert into public.variables (
+  id,
+  organization_id,
+  name,
+  key,
+  description,
+  type,
+  extraction_prompt,
+  active,
+  required,
+  options
+)
+values
+  (
+    '00000000-0000-4000-8000-000000000601',
+    '00000000-0000-4000-8000-000000000001',
+    'Presupuesto',
+    'presupuesto',
+    'Presupuesto informado por el lead.',
+    'price',
+    'Extraer monto, precio o presupuesto mencionado por el cliente.',
+    true,
+    false,
+    '[]'
+  ),
+  (
+    '00000000-0000-4000-8000-000000000602',
+    '00000000-0000-4000-8000-000000000001',
+    'Email',
+    'email',
+    'Email principal del lead.',
+    'text',
+    'Extraer email de contacto del cliente.',
+    true,
+    false,
+    '[]'
+  ),
+  (
+    '00000000-0000-4000-8000-000000000603',
+    '00000000-0000-4000-8000-000000000001',
+    'Interes',
+    'interes',
+    'Interes comercial declarado.',
+    'option',
+    'Extraer interes del cliente si menciona CRM, WhatsApp o IA.',
+    true,
+    false,
+    '["CRM", "WhatsApp", "IA"]'
+  )
+on conflict (id) do nothing;

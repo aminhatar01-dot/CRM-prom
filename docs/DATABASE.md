@@ -174,3 +174,43 @@ Guarda resultado de clasificacion:
 - `output`
 
 Las nuevas tablas tienen RLS y triggers de integridad tenant.
+
+## Variables FASE 6
+
+### `variables`
+
+Definiciones:
+
+- `name`
+- `key`
+- `description`
+- `type`
+- `extraction_prompt`
+- `active`
+- `required`
+- `options`
+- `auto_extract_enabled`
+
+### `lead_variables`
+
+Valores por lead con `unique (lead_id, variable_id)`.
+
+### `conversation_variables`
+
+Valores por conversacion con `unique (conversation_id, variable_id)`.
+
+### `variable_extraction_logs`
+
+Registra cada intento:
+
+- `variable_id`
+- `lead_id`
+- `conversation_id`
+- `source_message_id`
+- `mode`
+- `extracted`
+- `value`
+- `confidence`
+- `reason`
+- `input`
+- `output`

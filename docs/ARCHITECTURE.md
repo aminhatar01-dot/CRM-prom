@@ -64,3 +64,15 @@ Smart Tags amplian la tabla `tags` y agregan:
 - Acciones server-side para CRUD, asignacion y clasificacion.
 
 La clasificacion automatica queda preparada, pero se ejecuta manualmente desde Inbox en esta fase.
+
+## FASE 6
+
+Variables Inteligentes agregan:
+
+- `variables`
+- `lead_variables`
+- `conversation_variables`
+- `variable_extraction_logs`
+- `VariableExtractor`
+
+La extraccion automatica queda preparada pero desactivada. La UI ejecuta extracciones manuales desde Inbox y la ficha de lead.

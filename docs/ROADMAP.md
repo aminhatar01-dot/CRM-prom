@@ -40,16 +40,22 @@
 - Asignacion manual.
 - Logs y auditoria.
 
-## Siguiente
-
 ### FASE 6
 
-- Extraccion de variables.
-- Fallback y pausa IA.
+- Variables Inteligentes.
+- Extraccion demo.
+- Valores por lead/conversacion.
+- Logs de extraccion.
+
+## Siguiente
 
 ### FASE 7
 
 - Automatizaciones.
+- Fallback avanzado y pausa IA.
+
+### FASE 8
+
 - Google Sheets.
 - HTTP Custom Connect.
 - WebChat embebible.
