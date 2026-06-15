@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "plugins": [{ "name": "next" }],
+    "paths": {
+      "@/*": ["./src/*"],
+      "@crm-pro-ai/ui/*": ["../../packages/ui/src/*"],
+      "@crm-pro-ai/types/*": ["../../packages/types/src/*"],
+      "@crm-pro-ai/ai/*": ["../../packages/ai/src/*"],
+      "@crm-pro-ai/integrations/*": ["../../packages/integrations/src/*"],
+      "@crm-pro-ai/automation/*": ["../../packages/automation/src/*"],
+      "@crm-pro-ai/database/*": ["../../packages/database/src/*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}

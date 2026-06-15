@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["dom", "dom.iterable", "es2022"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "baseUrl": ".",
+    "paths": {
+      "@crm-pro-ai/ui/*": ["packages/ui/src/*"],
+      "@crm-pro-ai/types/*": ["packages/types/src/*"],
+      "@crm-pro-ai/ai/*": ["packages/ai/src/*"],
+      "@crm-pro-ai/integrations/*": ["packages/integrations/src/*"],
+      "@crm-pro-ai/automation/*": ["packages/automation/src/*"],
+      "@crm-pro-ai/database/*": ["packages/database/src/*"]
+    }
+  }
+}
