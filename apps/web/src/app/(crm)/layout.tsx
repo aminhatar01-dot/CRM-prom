@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bot, LayoutDashboard, MessageSquareText, Settings, UsersRound } from "lucide-react";
+import { Bot, LayoutDashboard, MessageSquareText, Settings, Sparkles, UsersRound } from "lucide-react";
 import { Button } from "@crm-pro-ai/ui/button";
 import { requireUser } from "@/lib/auth";
 import { getActiveOrganization } from "@/lib/organization";
@@ -14,6 +14,7 @@ export default async function CrmLayout({ children }: { children: React.ReactNod
     { href: "/leads", label: "Leads", icon: UsersRound },
     { href: "/contacts", label: "Contactos", icon: UsersRound },
     { href: "/inbox", label: "Inbox", icon: MessageSquareText },
+    { href: "/assistants", label: "Asistentes", icon: Sparkles },
     { href: "/settings/channels/whatsapp", label: "WhatsApp", icon: Settings }
   ];
 

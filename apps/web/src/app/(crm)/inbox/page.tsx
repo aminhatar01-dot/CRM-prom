@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bot, Search, SendHorizontal } from "lucide-react";
+import { Bot, Search, SendHorizontal, Sparkles } from "lucide-react";
 import {
   conversationAiStatuses,
   conversationChannels,
@@ -8,6 +8,7 @@ import {
 import { Button } from "@crm-pro-ai/ui/button";
 import { Input } from "@crm-pro-ai/ui/input";
 import { createMessage, updateConversation } from "@/app/actions/crm";
+import { suggestConversationReply } from "@/app/actions/ai";
 import { requireUser } from "@/lib/auth";
 import { getActiveOrganization, getAssignableMembers } from "@/lib/organization";
 import { RealtimeRefresh } from "./_components/realtime-refresh";
@@ -53,6 +54,7 @@ export default async function InboxPage({
     channel?: string;
     status?: string;
     owner?: string;
+    ai_log?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -93,6 +95,21 @@ export default async function InboxPage({
         .order("created_at", { ascending: true })
         .returns<MessageRow[]>()
     : { data: [] };
+  const { data: assistants } = await supabase
+    .from("ai_assistants")
+    .select("id, name")
+    .eq("organization_id", organization.id)
+    .eq("active", true)
+    .order("created_at", { ascending: false })
+    .returns<{ id: string; name: string }[]>();
+  const { data: aiSuggestion } = params.ai_log
+    ? await supabase
+        .from("ai_logs")
+        .select("id, output, mode, model")
+        .eq("id", params.ai_log)
+        .eq("organization_id", organization.id)
+        .maybeSingle<{ id: string; output: string | null; mode: string; model: string | null }>()
+    : { data: null };
 
   return (
     <section className="h-[calc(100vh-4rem)]">
@@ -177,6 +194,34 @@ export default async function InboxPage({
                   <Button type="submit" size="sm" variant="outline">Guardar</Button>
                 </form>
               </header>
+              <div className="border-b bg-card px-5 py-3">
+                <form action={suggestConversationReply} className="flex flex-wrap items-center gap-2">
+                  <input type="hidden" name="conversation_id" value={selected.id} />
+                  <select name="assistant_id" className="h-9 rounded-md border bg-background px-2 text-xs">
+                    <option value="">Asistente activo</option>
+                    {(assistants ?? []).map((assistant) => (
+                      <option key={assistant.id} value={assistant.id}>
+                        {assistant.name}
+                      </option>
+                    ))}
+                  </select>
+                  <Button type="submit" size="sm" variant="outline">
+                    <Sparkles className="size-4" />
+                    Sugerir respuesta con IA
+                  </Button>
+                  {aiSuggestion?.output ? (
+                    <span className="text-xs text-muted-foreground">
+                      Sugerencia generada en modo {aiSuggestion.mode}
+                    </span>
+                  ) : null}
+                </form>
+                {aiSuggestion?.output ? (
+                  <div className="mt-3 rounded-md border bg-muted/60 p-3 text-sm">
+                    <p className="mb-1 text-xs font-medium text-muted-foreground">Borrador IA para revision humana</p>
+                    <p>{aiSuggestion.output}</p>
+                  </div>
+                ) : null}
+              </div>
               <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-5">
                 {(messages ?? []).map((message) => (
                   <div
