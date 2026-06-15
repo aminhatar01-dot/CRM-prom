@@ -1,0 +1,13 @@
+{
+  "name": "@crm-pro-ai/ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./button": "./src/button.tsx",
+    "./card": "./src/card.tsx",
+    "./input": "./src/input.tsx",
+    "./label": "./src/label.tsx",
+    "./utils": "./src/utils.ts"
+  }
+}

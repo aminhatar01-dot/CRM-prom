@@ -1,0 +1,10 @@
+{
+  "name": "@crm-pro-ai/types",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./tenant": "./src/tenant.ts",
+    "./crm": "./src/crm.ts"
+  }
+}

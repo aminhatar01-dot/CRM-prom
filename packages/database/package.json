@@ -1,0 +1,9 @@
+{
+  "name": "@crm-pro-ai/database",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./tenant": "./src/tenant.ts"
+  }
+}

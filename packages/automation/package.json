@@ -1,0 +1,9 @@
+{
+  "name": "@crm-pro-ai/automation",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./rules": "./src/rules.ts"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "@crm-pro-ai/ai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./assistant": "./src/assistant.ts"
+  }
+}

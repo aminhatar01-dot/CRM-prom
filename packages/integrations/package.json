@@ -1,0 +1,9 @@
+{
+  "name": "@crm-pro-ai/integrations",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./tools": "./src/tools.ts"
+  }
+}
