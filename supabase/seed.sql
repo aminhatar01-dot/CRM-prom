@@ -119,3 +119,35 @@ values (
   false
 )
 on conflict (organization_id, phone_number_id) do nothing;
+
+insert into public.ai_assistants (
+  id,
+  organization_id,
+  name,
+  description,
+  prompt,
+  objective,
+  tone,
+  rules,
+  fallback_message,
+  active,
+  enabled,
+  channel_id,
+  auto_reply_enabled
+)
+values (
+  '00000000-0000-4000-8000-000000000401',
+  '00000000-0000-4000-8000-000000000001',
+  'Asistente Comercial Demo',
+  'Sugiere respuestas comerciales para conversaciones entrantes.',
+  'Actua como asesor comercial de CRM PRO AI. Responde de forma clara, breve y orientada a avanzar la oportunidad.',
+  'Calificar al lead y proponer el siguiente paso sin inventar informacion.',
+  'friendly',
+  '["No prometas integraciones no configuradas", "Pide datos faltantes de manera natural"]',
+  'Un asesor del equipo va a ayudarte en breve.',
+  true,
+  true,
+  'whatsapp',
+  false
+)
+on conflict (id) do nothing;

@@ -26,16 +26,22 @@
 - Envio manual de texto desde Inbox.
 - Persistencia de eventos WhatsApp.
 
-## Siguiente
-
 ### FASE 4
 
 - Asistentes IA configurables.
+- AIOrchestrator.
+- Pruebas manuales de asistentes.
+- Sugerencias IA en Inbox.
+
+## Siguiente
+
+### FASE 5
+
 - Smart Tags.
 - Extraccion de variables.
 - Fallback y pausa IA.
 
-### FASE 5
+### FASE 6
 
 - Automatizaciones.
 - Google Sheets.

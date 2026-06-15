@@ -28,6 +28,14 @@ SaaS CRM multi tenant construido con Next.js 15, Supabase y OpenAI.
 - Settings > Channels > WhatsApp.
 - Validacion de firma HMAC opcional con `WHATSAPP_APP_SECRET`.
 
+## FASE 4
+
+- CRUD de asistentes IA.
+- AIOrchestrator con contexto de CRM.
+- OpenAI Responses API con modo demo sin `OPENAI_API_KEY`.
+- Pruebas guardadas de asistentes.
+- Boton de sugerencia IA en Inbox sin envio automatico.
+
 ## Validacion
 
 ```bash
@@ -36,4 +44,4 @@ npm run build
 npm run test
 ```
 
-Consulta [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATABASE.md](docs/DATABASE.md), [docs/ROADMAP.md](docs/ROADMAP.md), [docs/WHATSAPP_SETUP.md](docs/WHATSAPP_SETUP.md), [docs/PHASE_3_VALIDATION.md](docs/PHASE_3_VALIDATION.md) y [docs/supabase-setup.md](docs/supabase-setup.md).
+Consulta [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATABASE.md](docs/DATABASE.md), [docs/ROADMAP.md](docs/ROADMAP.md), [docs/AI_ORCHESTRATION.md](docs/AI_ORCHESTRATION.md), [docs/PHASE_4_VALIDATION.md](docs/PHASE_4_VALIDATION.md), [docs/WHATSAPP_SETUP.md](docs/WHATSAPP_SETUP.md) y [docs/supabase-setup.md](docs/supabase-setup.md).

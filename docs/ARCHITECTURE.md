@@ -41,3 +41,15 @@ La fase 3 conecta WhatsApp Cloud API:
 - `whatsapp_events`: bitacora de payloads recibidos, enviados y errores.
 
 Los webhooks usan service role exclusivamente en servidor porque no hay sesion de usuario en llamadas de Meta.
+
+## FASE 4
+
+La fase 4 agrega asistentes IA:
+
+- CRUD en `/assistants`.
+- `AIOrchestrator` en `packages/ai`.
+- `ai_logs` para sugerencias y errores.
+- `ai_assistant_tests` para pruebas manuales.
+- Sugerencias en Inbox sin envio automatico.
+
+OpenAI se llama desde servidor. Si no hay `OPENAI_API_KEY`, el sistema usa modo demo.

@@ -104,3 +104,41 @@ Persistencia de eventos:
 - `error_message`
 
 Ambas tablas tienen RLS por `organization_id`.
+
+## IA FASE 4
+
+### `ai_assistants`
+
+La tabla base se amplia con:
+
+- `description`
+- `objective`
+- `active`
+- `channel_id`
+- `auto_reply_enabled`
+
+### `ai_logs`
+
+Registra llamadas y sugerencias:
+
+- `assistant_id`
+- `conversation_id`
+- `message_id`
+- `provider`
+- `model`
+- `mode`
+- `input`
+- `output`
+- `status`
+- `error_message`
+
+### `ai_assistant_tests`
+
+Guarda pruebas manuales de asistentes:
+
+- `assistant_id`
+- `conversation_id`
+- `input`
+- `output`
+- `status`
+- `metadata`
