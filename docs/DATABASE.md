@@ -142,3 +142,35 @@ Guarda pruebas manuales de asistentes:
 - `output`
 - `status`
 - `metadata`
+
+## Smart Tags FASE 5
+
+### `tags`
+
+La tabla se amplia con:
+
+- `description`
+- `classification_prompt`
+- `active`
+- `auto_pause_assistant`
+- `notify_team`
+
+### `conversation_smart_tags`
+
+Relaciona tags con conversaciones y evita duplicados mediante `unique (conversation_id, tag_id)`.
+
+### `smart_tag_classification_logs`
+
+Guarda resultado de clasificacion:
+
+- `conversation_id`
+- `lead_id`
+- `tag_id`
+- `mode`
+- `matched`
+- `confidence`
+- `reason`
+- `input`
+- `output`
+
+Las nuevas tablas tienen RLS y triggers de integridad tenant.

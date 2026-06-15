@@ -36,6 +36,14 @@ SaaS CRM multi tenant construido con Next.js 15, Supabase y OpenAI.
 - Pruebas guardadas de asistentes.
 - Boton de sugerencia IA en Inbox sin envio automatico.
 
+## FASE 5
+
+- CRUD de Smart Tags.
+- Asignacion manual a leads y conversaciones.
+- Clasificacion demo desde Inbox.
+- Logs y auditoria de clasificacion.
+- Auto pause de IA cuando el tag lo requiere.
+
 ## Validacion
 
 ```bash
@@ -44,4 +52,4 @@ npm run build
 npm run test
 ```
 
-Consulta [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATABASE.md](docs/DATABASE.md), [docs/ROADMAP.md](docs/ROADMAP.md), [docs/AI_ORCHESTRATION.md](docs/AI_ORCHESTRATION.md), [docs/PHASE_4_VALIDATION.md](docs/PHASE_4_VALIDATION.md), [docs/WHATSAPP_SETUP.md](docs/WHATSAPP_SETUP.md) y [docs/supabase-setup.md](docs/supabase-setup.md).
+Consulta [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATABASE.md](docs/DATABASE.md), [docs/ROADMAP.md](docs/ROADMAP.md), [docs/AI_ORCHESTRATION.md](docs/AI_ORCHESTRATION.md), [docs/SMART_TAGS.md](docs/SMART_TAGS.md), [docs/PHASE_5_VALIDATION.md](docs/PHASE_5_VALIDATION.md), [docs/WHATSAPP_SETUP.md](docs/WHATSAPP_SETUP.md) y [docs/supabase-setup.md](docs/supabase-setup.md).

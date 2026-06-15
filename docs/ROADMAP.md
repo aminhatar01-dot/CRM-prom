@@ -33,15 +33,21 @@
 - Pruebas manuales de asistentes.
 - Sugerencias IA en Inbox.
 
-## Siguiente
-
 ### FASE 5
 
 - Smart Tags.
+- Clasificacion demo con IA.
+- Asignacion manual.
+- Logs y auditoria.
+
+## Siguiente
+
+### FASE 6
+
 - Extraccion de variables.
 - Fallback y pausa IA.
 
-### FASE 6
+### FASE 7
 
 - Automatizaciones.
 - Google Sheets.

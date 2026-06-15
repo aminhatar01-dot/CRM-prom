@@ -53,3 +53,14 @@ La fase 4 agrega asistentes IA:
 - Sugerencias en Inbox sin envio automatico.
 
 OpenAI se llama desde servidor. Si no hay `OPENAI_API_KEY`, el sistema usa modo demo.
+
+## FASE 5
+
+Smart Tags amplian la tabla `tags` y agregan:
+
+- `conversation_smart_tags`
+- `smart_tag_classification_logs`
+- `SmartTagClassifier`
+- Acciones server-side para CRUD, asignacion y clasificacion.
+
+La clasificacion automatica queda preparada, pero se ejecuta manualmente desde Inbox en esta fase.

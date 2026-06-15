@@ -26,6 +26,26 @@ values
   ('00000000-0000-4000-8000-000000000001', 'Presupuesto pendiente', '#b45309', true)
 on conflict do nothing;
 
+update public.tags
+set
+  description = 'Lead con señales claras de compra o avance comercial.',
+  classification_prompt = 'Clasificar cuando el cliente pide demo, precios, propuesta o quiere avanzar.',
+  active = true,
+  auto_pause_assistant = false,
+  notify_team = true
+where organization_id = '00000000-0000-4000-8000-000000000001'
+  and name = 'Alta intención';
+
+update public.tags
+set
+  description = 'Conversacion donde falta confirmar presupuesto.',
+  classification_prompt = 'Clasificar cuando el cliente menciona presupuesto, precio, costo o financiacion.',
+  active = true,
+  auto_pause_assistant = true,
+  notify_team = false
+where organization_id = '00000000-0000-4000-8000-000000000001'
+  and name = 'Presupuesto pendiente';
+
 insert into public.leads (
   id,
   organization_id,
