@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./tenant": "./src/tenant.ts"
+    "./tenant": "./src/tenant.ts",
+    "./crm": "./src/crm.ts"
   }
 }
