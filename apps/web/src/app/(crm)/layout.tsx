@@ -18,6 +18,7 @@ export default async function CrmLayout({ children }: { children: React.ReactNod
     { href: "/smart-tags", label: "Smart Tags", icon: Tags },
     { href: "/variables", label: "Variables", icon: Braces },
     { href: "/automations", label: "Automatizaciones", icon: Workflow },
+    { href: "/settings/channels/webchat", label: "WebChat", icon: MessageSquareText },
     { href: "/settings/channels/whatsapp", label: "WhatsApp", icon: Settings }
   ];
 
