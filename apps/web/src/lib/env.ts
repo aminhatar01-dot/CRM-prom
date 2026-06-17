@@ -14,6 +14,7 @@ const serverEnvSchema = publicEnvSchema.extend({
   WHATSAPP_GRAPH_API_VERSION: z.string().min(1).default("v23.0"),
   OPENAI_API_KEY: z.string().min(1).optional(),
   OPENAI_MODEL: z.string().min(1).default("gpt-5.5"),
+  CRON_SECRET: z.string().min(1).optional(),
   AI_DEMO_MODE: z
     .enum(["true", "false"])
     .optional()
@@ -39,6 +40,7 @@ export function getServerEnv() {
     WHATSAPP_GRAPH_API_VERSION: process.env.WHATSAPP_GRAPH_API_VERSION,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     OPENAI_MODEL: process.env.OPENAI_MODEL,
+    CRON_SECRET: process.env.CRON_SECRET,
     AI_DEMO_MODE: process.env.AI_DEMO_MODE
   });
 }

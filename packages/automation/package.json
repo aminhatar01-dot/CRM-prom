@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./rules": "./src/rules.ts"
+    "./rules": "./src/rules.ts",
+    "./engine": "./src/engine.ts"
   }
 }
