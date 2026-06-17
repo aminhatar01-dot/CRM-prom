@@ -1,7 +1,9 @@
 import Link from "next/link";
-import { Braces, MessageSquarePlus, Pencil, UserRoundCheck } from "lucide-react";
+import { Bell, Braces, MessageSquarePlus, Pencil, UserRoundCheck } from "lucide-react";
 import { Button } from "@crm-pro-ai/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@crm-pro-ai/ui/card";
+import { Input } from "@crm-pro-ai/ui/input";
+import { createManualFollowUp } from "@/app/actions/automations";
 import { createConversation, convertLeadToContact } from "@/app/actions/crm";
 import { assignSmartTag } from "@/app/actions/smart-tags";
 import { extractLeadVariables } from "@/app/actions/variables";
@@ -40,11 +42,33 @@ type LeadVariableRow = {
   } | null;
 };
 
+type TaskRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  due_at: string | null;
+};
+
+type NotificationRow = {
+  id: string;
+  title: string;
+  body: string | null;
+  created_at: string;
+};
+
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { supabase, user } = await requireUser();
   const organization = await getActiveOrganization(supabase, user);
-  const [{ data: lead }, { data: smartTags }, { data: assignedTags }, { data: leadVariables }] = await Promise.all([
+  const [
+    { data: lead },
+    { data: smartTags },
+    { data: assignedTags },
+    { data: leadVariables },
+    { data: tasks },
+    { data: notifications }
+  ] = await Promise.all([
     supabase
       .from("leads")
       .select("id, first_name, last_name, email, phone, company, source, status, owner_id, notes, contact_id")
@@ -69,7 +93,24 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
       .select("value, confidence, extracted_at, variables(id, name, key, type)")
       .eq("organization_id", organization.id)
       .eq("lead_id", id)
-      .returns<LeadVariableRow[]>()
+      .returns<LeadVariableRow[]>(),
+    supabase
+      .from("tasks")
+      .select("id, title, description, status, due_at")
+      .eq("organization_id", organization.id)
+      .eq("lead_id", id)
+      .eq("status", "pending")
+      .order("due_at", { ascending: true, nullsFirst: false })
+      .returns<TaskRow[]>(),
+    supabase
+      .from("internal_notifications")
+      .select("id, title, body, created_at")
+      .eq("organization_id", organization.id)
+      .eq("entity_table", "leads")
+      .eq("entity_id", id)
+      .order("created_at", { ascending: false })
+      .limit(5)
+      .returns<NotificationRow[]>()
   ]);
 
   if (!lead) {
@@ -158,6 +199,42 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
             </select>
             <Button type="submit" variant="outline">Asignar tag</Button>
           </form>
+        </CardContent>
+      </Card>
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle>Seguimientos y notificaciones</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <form action={createManualFollowUp} className="grid gap-2 md:grid-cols-[1fr_180px_auto]">
+            <input type="hidden" name="lead_id" value={lead.id} />
+            <input type="hidden" name="return_to" value={`/leads/${lead.id}`} />
+            <Input name="title" placeholder="Crear seguimiento manual" required />
+            <Input name="due_at" type="datetime-local" />
+            <Button type="submit" variant="outline">Crear tarea</Button>
+          </form>
+          <div className="grid gap-2 md:grid-cols-2">
+            {(tasks ?? []).map((task) => (
+              <div key={task.id} className="rounded-md border p-3 text-sm">
+                <p className="font-medium">{task.title}</p>
+                <p className="text-muted-foreground">
+                  {task.due_at ? new Date(task.due_at).toLocaleString("es-AR") : "Sin vencimiento"}
+                </p>
+              </div>
+            ))}
+            {(notifications ?? []).map((notification) => (
+              <div key={notification.id} className="rounded-md border p-3 text-sm">
+                <p className="flex items-center gap-2 font-medium">
+                  <Bell className="size-4" />
+                  {notification.title}
+                </p>
+                <p className="text-muted-foreground">{notification.body ?? "Notificacion interna"}</p>
+              </div>
+            ))}
+            {(tasks ?? []).length === 0 && (notifications ?? []).length === 0 ? (
+              <p className="text-sm text-muted-foreground">Sin seguimientos pendientes.</p>
+            ) : null}
+          </div>
         </CardContent>
       </Card>
       <Card className="mt-4">

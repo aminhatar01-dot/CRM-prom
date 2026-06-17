@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bot, Braces, Search, SendHorizontal, Sparkles, Tags } from "lucide-react";
+import { Bell, Bot, Braces, Search, SendHorizontal, Sparkles, Tags } from "lucide-react";
 import {
   conversationAiStatuses,
   conversationChannels,
@@ -8,6 +8,7 @@ import {
 import { Button } from "@crm-pro-ai/ui/button";
 import { Input } from "@crm-pro-ai/ui/input";
 import { createMessage, updateConversation } from "@/app/actions/crm";
+import { createManualFollowUp } from "@/app/actions/automations";
 import { suggestConversationReply } from "@/app/actions/ai";
 import { analyzeConversationSmartTags, assignSmartTag } from "@/app/actions/smart-tags";
 import { extractConversationVariables } from "@/app/actions/variables";
@@ -25,6 +26,7 @@ type ConversationRow = {
   last_message_at: string | null;
   created_at: string;
   leads: {
+    id: string;
     first_name: string;
     last_name: string | null;
     phone: string | null;
@@ -44,6 +46,21 @@ type MessageRow = {
   direction: string;
   channel: string;
   status: string;
+  created_at: string;
+};
+
+type TaskRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  due_at: string | null;
+};
+
+type NotificationRow = {
+  id: string;
+  title: string;
+  body: string | null;
   created_at: string;
 };
 
@@ -70,7 +87,7 @@ export default async function InboxPage({
   let conversationsQuery = supabase
     .from("conversations")
     .select(
-      "id, channel, status, ai_status, ai_paused, owner_id, last_message_at, created_at, leads(first_name, last_name, phone, status), contacts(first_name, last_name, phone), messages(body, created_at)",
+      "id, channel, status, ai_status, ai_paused, owner_id, last_message_at, created_at, leads(id, first_name, last_name, phone, status), contacts(first_name, last_name, phone), messages(body, created_at)",
     )
     .eq("organization_id", organization.id)
     .order("last_message_at", { ascending: false, nullsFirst: false })
@@ -145,6 +162,27 @@ export default async function InboxPage({
         .eq("organization_id", organization.id)
         .maybeSingle<{ id: string; output: string | null; mode: string; model: string | null }>()
     : { data: null };
+  const { data: selectedTasks } = selected
+    ? await supabase
+        .from("tasks")
+        .select("id, title, description, status, due_at")
+        .eq("organization_id", organization.id)
+        .eq("conversation_id", selected.id)
+        .eq("status", "pending")
+        .order("due_at", { ascending: true, nullsFirst: false })
+        .returns<TaskRow[]>()
+    : { data: [] };
+  const { data: selectedNotifications } = selected
+    ? await supabase
+        .from("internal_notifications")
+        .select("id, title, body, created_at")
+        .eq("organization_id", organization.id)
+        .eq("entity_table", "conversations")
+        .eq("entity_id", selected.id)
+        .order("created_at", { ascending: false })
+        .limit(5)
+        .returns<NotificationRow[]>()
+    : { data: [] };
 
   return (
     <section className="h-[calc(100vh-4rem)]">
@@ -317,6 +355,35 @@ export default async function InboxPage({
                     )}
                   </div>
                 ) : null}
+                {((selectedTasks ?? []).length > 0 || (selectedNotifications ?? []).length > 0) ? (
+                  <div className="mt-3 grid gap-2 md:grid-cols-2">
+                    {(selectedTasks ?? []).map((task) => (
+                      <div key={task.id} className="rounded-md border bg-background px-3 py-2 text-xs">
+                        <p className="font-medium">{task.title}</p>
+                        <p className="text-muted-foreground">
+                          {task.due_at ? new Date(task.due_at).toLocaleString("es-AR") : "Sin vencimiento"}
+                        </p>
+                      </div>
+                    ))}
+                    {(selectedNotifications ?? []).map((notification) => (
+                      <div key={notification.id} className="rounded-md border bg-background px-3 py-2 text-xs">
+                        <p className="flex items-center gap-1 font-medium">
+                          <Bell className="size-3" />
+                          {notification.title}
+                        </p>
+                        <p className="text-muted-foreground">{notification.body ?? "Notificacion interna"}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+                <form action={createManualFollowUp} className="mt-3 grid gap-2 rounded-md border bg-background p-3 md:grid-cols-[1fr_180px_auto]">
+                  <input type="hidden" name="conversation_id" value={selected.id} />
+                  <input type="hidden" name="lead_id" value={selected.leads?.id ?? ""} />
+                  <input type="hidden" name="return_to" value={`/inbox?conversation=${selected.id}`} />
+                  <Input name="title" placeholder="Crear seguimiento manual" required />
+                  <Input name="due_at" type="datetime-local" />
+                  <Button type="submit" size="sm" variant="outline">Crear tarea</Button>
+                </form>
               </div>
               <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-5">
                 {(messages ?? []).map((message) => (
