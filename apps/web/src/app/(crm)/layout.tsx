@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bot, Braces, LayoutDashboard, MessageSquareText, Settings, Sparkles, Tags, UsersRound, Workflow } from "lucide-react";
+import { Bot, Braces, LayoutDashboard, MessageSquareText, Plug, Settings, Sparkles, Tags, UsersRound, Workflow } from "lucide-react";
 import { Button } from "@crm-pro-ai/ui/button";
 import { requireUser } from "@/lib/auth";
 import { getActiveOrganization } from "@/lib/organization";
@@ -18,6 +18,7 @@ export default async function CrmLayout({ children }: { children: React.ReactNod
     { href: "/smart-tags", label: "Smart Tags", icon: Tags },
     { href: "/variables", label: "Variables", icon: Braces },
     { href: "/automations", label: "Automatizaciones", icon: Workflow },
+    { href: "/integrations", label: "Integraciones", icon: Plug },
     { href: "/settings/channels/webchat", label: "WebChat", icon: MessageSquareText },
     { href: "/settings/channels/whatsapp", label: "WhatsApp", icon: Settings }
   ];

@@ -8,6 +8,7 @@ import { AIOrchestrator } from "@crm-pro-ai/ai/orchestrator";
 import { requireUser } from "@/lib/auth";
 import { getServerEnv } from "@/lib/env";
 import { buildConversationAIContext, mapAssistant, type AssistantRow } from "@/lib/ai/context";
+import { loadAvailableAITools } from "@/lib/ai/tools";
 import { getActiveOrganization } from "@/lib/organization";
 
 const assistantIdSchema = z.object({
@@ -111,6 +112,7 @@ export async function runAssistantTest(formData: FormData) {
     conversationId: parsed.data.conversation_id,
     userInput: parsed.data.input
   });
+  context.availableTools = await loadAvailableAITools(supabase, organization.id);
   const orchestrator = new AIOrchestrator({
     apiKey: env.OPENAI_API_KEY,
     model: env.OPENAI_MODEL,
@@ -201,6 +203,7 @@ export async function suggestConversationReply(formData: FormData) {
     assistant,
     conversationId: parsed.data.conversation_id
   });
+  context.availableTools = await loadAvailableAITools(supabase, organization.id);
   const orchestrator = new AIOrchestrator({
     apiKey: env.OPENAI_API_KEY,
     model: env.OPENAI_MODEL,

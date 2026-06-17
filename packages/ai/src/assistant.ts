@@ -60,5 +60,12 @@ export type AIContext = {
   conversation?: AIConversationContext;
   person?: AIPersonContext;
   messages: AIMessageContext[];
+  availableTools?: Array<{
+    id: string;
+    name: string;
+    type: string;
+    description?: string | null;
+    input_schema?: Record<string, unknown>;
+  }>;
   userInput?: string;
 };

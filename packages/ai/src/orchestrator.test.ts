@@ -56,6 +56,26 @@ describe("AIOrchestrator", () => {
     expect(built).toContain("Hola, quiero conocer precios.");
   });
 
+  it("lists available tools in context without executing them", () => {
+    const orchestrator = new AIOrchestrator({ demoMode: true });
+    const built = orchestrator.buildContext({
+      ...context,
+      availableTools: [
+        {
+          id: "00000000-0000-4000-8000-000000000911",
+          name: "Buscar Google Sheets demo",
+          type: "google_sheets",
+          description: "Busca filas por texto",
+          input_schema: { query: "string" }
+        }
+      ]
+    });
+
+    expect(built).toContain("Herramientas disponibles");
+    expect(built).toContain("Buscar Google Sheets demo");
+    expect(built).toContain("no ejecutar automaticamente");
+  });
+
   it("falls back to demo mode without an API key", async () => {
     const orchestrator = new AIOrchestrator();
     const result = await orchestrator.generateReply(context);

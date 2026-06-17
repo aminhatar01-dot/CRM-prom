@@ -35,6 +35,9 @@ export class AIOrchestrator {
       .slice(-12)
       .map((message) => `${message.direction.toUpperCase()} [${message.channel}/${message.status}]: ${message.body}`)
       .join("\n");
+    const tools = (context.availableTools ?? [])
+      .map((tool) => `- ${tool.name} (${tool.type}): ${tool.description ?? "Sin descripcion"}; input=${JSON.stringify(tool.input_schema ?? {})}`)
+      .join("\n");
 
     return [
       `Organizacion: ${context.organizationName}`,
@@ -48,6 +51,7 @@ export class AIOrchestrator {
         ? `Persona (${person.kind}): ${person.name}; email=${person.email ?? "n/a"}; telefono=${person.phone ?? "n/a"}; empresa=${person.company ?? "n/a"}; estado=${person.status ?? "n/a"}; notas=${person.notes ?? "n/a"}`
         : "Persona: desconocida",
       `Reglas: ${assistant.rules ?? "Sin reglas adicionales."}`,
+      `Herramientas disponibles (solo listar, no ejecutar automaticamente):\n${tools || "Sin herramientas externas disponibles."}`,
       `Historial reciente:\n${history || "Sin mensajes previos."}`,
       `Entrada del operador: ${context.userInput ?? "Sugerir la proxima respuesta."}`
     ].join("\n\n");
