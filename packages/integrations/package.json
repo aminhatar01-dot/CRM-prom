@@ -6,6 +6,7 @@
   "exports": {
     "./tools": "./src/tools.ts",
     "./whatsapp": "./src/whatsapp.ts",
-    "./whatsapp-cloud-service": "./src/whatsapp-cloud-service.ts"
+    "./whatsapp-cloud-service": "./src/whatsapp-cloud-service.ts",
+    "./webchat": "./src/webchat.ts"
   }
 }
