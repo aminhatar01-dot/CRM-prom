@@ -101,3 +101,18 @@ WebChat agrega:
 - settings en `/settings/channels/webchat`
 
 Los endpoints publicos usan service role solo server-side, validan `public_token`, dominio permitido y rate limit basico. Las conversaciones y mensajes se guardan en las mismas tablas CRM para aparecer en Inbox.
+
+## FASE 9
+
+Integraciones agregan:
+
+- `integrations`
+- `integration_tools`
+- `integration_tool_runs`
+- `google_sheets_connections`
+- `integration_secrets`
+- `ToolExecutor`
+- `CustomConnectExecutor`
+- `GoogleSheetsConnector`
+
+El AIOrchestrator recibe herramientas activas como contexto disponible, pero no las ejecuta automaticamente. Las ejecuciones quedan restringidas a pruebas manuales desde `/integrations`.

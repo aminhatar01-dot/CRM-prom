@@ -296,3 +296,57 @@ Referencia opcional al widget que inicio una conversacion `channel='webchat'`.
 - Politicas de lectura por miembros y gestion por admins.
 - Trigger de integridad para validar `assistant_id` y `webchat_widget_id` dentro de la misma organizacion.
 - Indices por organizacion, token publico y widget de conversacion.
+
+## Integraciones FASE 9
+
+### `integrations`
+
+- `organization_id`
+- `name`
+- `description`
+- `kind`: `custom_connect`, `google_sheets`
+- `active`
+- `credentials_ref`
+- `config`
+
+### `integration_tools`
+
+- `integration_id`
+- `name`
+- `description`
+- `type`
+- `method`
+- `url`
+- `headers_schema`
+- `body_schema`
+- `response_schema`
+- `active`
+- `timeout_ms`
+- `config`
+
+### `integration_tool_runs`
+
+Logs de ejecucion manual:
+
+- `integration_id`
+- `tool_id`
+- `status`
+- `input`
+- `output`
+- `error_message`
+- `duration_ms`
+- `executed_by`
+
+### `google_sheets_connections`
+
+Configura hojas publicas o `demo://`:
+
+- `spreadsheet_url`
+- `sheet_name`
+- `api_key_ref`
+- `active`
+- `last_test_at`
+
+### `integration_secrets`
+
+Guarda referencias a credenciales, no secretos reales.

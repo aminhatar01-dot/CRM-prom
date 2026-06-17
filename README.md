@@ -68,6 +68,13 @@ SaaS CRM multi tenant construido con Next.js 15, Supabase y OpenAI.
 - Creacion/actualizacion de leads/contactos desde WebChat.
 - Conversaciones `webchat` visibles en Inbox con respuesta manual e IA sugerida.
 
+## FASE 9
+
+- Integraciones externas con Custom Connect y Google Sheets MVP.
+- ToolExecutor con ejecucion manual/test y logs.
+- AIOrchestrator lista herramientas disponibles sin ejecutarlas automaticamente.
+- RLS e integridad multi tenant para integraciones y runs.
+
 ## Validacion
 
 ```bash
@@ -76,4 +83,4 @@ npm run build
 npm run test
 ```
 
-Consulta [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATABASE.md](docs/DATABASE.md), [docs/ROADMAP.md](docs/ROADMAP.md), [docs/AI_ORCHESTRATION.md](docs/AI_ORCHESTRATION.md), [docs/SMART_TAGS.md](docs/SMART_TAGS.md), [docs/VARIABLES.md](docs/VARIABLES.md), [docs/AUTOMATIONS.md](docs/AUTOMATIONS.md), [docs/WEBCHAT.md](docs/WEBCHAT.md), [docs/PHASE_8_VALIDATION.md](docs/PHASE_8_VALIDATION.md), [docs/WHATSAPP_SETUP.md](docs/WHATSAPP_SETUP.md) y [docs/supabase-setup.md](docs/supabase-setup.md).
+Consulta [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATABASE.md](docs/DATABASE.md), [docs/ROADMAP.md](docs/ROADMAP.md), [docs/AI_ORCHESTRATION.md](docs/AI_ORCHESTRATION.md), [docs/SMART_TAGS.md](docs/SMART_TAGS.md), [docs/VARIABLES.md](docs/VARIABLES.md), [docs/AUTOMATIONS.md](docs/AUTOMATIONS.md), [docs/WEBCHAT.md](docs/WEBCHAT.md), [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md), [docs/CUSTOM_CONNECT.md](docs/CUSTOM_CONNECT.md), [docs/GOOGLE_SHEETS.md](docs/GOOGLE_SHEETS.md), [docs/PHASE_9_VALIDATION.md](docs/PHASE_9_VALIDATION.md), [docs/WHATSAPP_SETUP.md](docs/WHATSAPP_SETUP.md) y [docs/supabase-setup.md](docs/supabase-setup.md).

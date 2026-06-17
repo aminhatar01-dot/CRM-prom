@@ -61,9 +61,17 @@
 - Endpoints publicos seguros.
 - Conversaciones WebChat en Inbox.
 
-## Siguiente
-
 ### FASE 9
 
 - Google Sheets.
 - HTTP Custom Connect.
+- ToolExecutor.
+- Logs de ejecucion.
+
+## Siguiente
+
+### FASE 10
+
+- WebChat avanzado.
+- Ejecucion controlada de tools por IA.
+- Integraciones adicionales.
