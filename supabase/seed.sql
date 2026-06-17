@@ -5,6 +5,69 @@ insert into public.organizations (id, name, slug)
 values ('00000000-0000-4000-8000-000000000001', 'Demo CRM PRO AI', 'demo-crm-pro-ai')
 on conflict (id) do nothing;
 
+insert into public.automation_rules (
+  id,
+  organization_id,
+  name,
+  description,
+  trigger_type,
+  status,
+  enabled,
+  trigger_config,
+  conditions
+)
+values
+  (
+    '00000000-0000-4000-8000-000000000701',
+    '00000000-0000-4000-8000-000000000001',
+    'Seguimiento demo para nuevos leads',
+    'Crea una tarea interna cuando un lead nuevo requiera seguimiento.',
+    'lead_created',
+    'draft',
+    false,
+    '{}',
+    '{"lead_status":"nuevo"}'
+  ),
+  (
+    '00000000-0000-4000-8000-000000000702',
+    '00000000-0000-4000-8000-000000000001',
+    'Pausar IA por tag sensible',
+    'Ejemplo de automatizacion manual que pausa IA y notifica al equipo.',
+    'manual',
+    'draft',
+    false,
+    '{}',
+    '{}'
+  )
+on conflict (id) do nothing;
+
+insert into public.automation_actions (
+  organization_id,
+  rule_id,
+  action_type,
+  config,
+  enabled,
+  position
+)
+values
+  (
+    '00000000-0000-4000-8000-000000000001',
+    '00000000-0000-4000-8000-000000000701',
+    'create_task',
+    '{"title":"Contactar nuevo lead","description":"Revisar datos del lead y responder manualmente."}',
+    true,
+    1
+  ),
+  (
+    '00000000-0000-4000-8000-000000000001',
+    '00000000-0000-4000-8000-000000000702',
+    'pause_ai',
+    '{}',
+    true,
+    1
+  )
+on conflict do nothing;
+
 insert into public.pipelines (id, organization_id, name)
 values (
   '00000000-0000-4000-8000-000000000010',
