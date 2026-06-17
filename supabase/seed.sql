@@ -235,6 +235,32 @@ values (
 )
 on conflict (id) do nothing;
 
+insert into public.webchat_widgets (
+  id,
+  organization_id,
+  name,
+  public_token,
+  primary_color,
+  initial_message,
+  position,
+  active,
+  allowed_domains,
+  assistant_id
+)
+values (
+  '00000000-0000-4000-8000-000000000801',
+  '00000000-0000-4000-8000-000000000001',
+  'Demo WebChat CRM PRO AI',
+  'wchat_demo_local_token_00000000000000000001',
+  '#0f766e',
+  'Hola, somos CRM PRO AI. Como podemos ayudarte?',
+  'bottom-right',
+  true,
+  array['localhost', '127.0.0.1'],
+  '00000000-0000-4000-8000-000000000401'
+)
+on conflict (id) do nothing;
+
 insert into public.variables (
   id,
   organization_id,
