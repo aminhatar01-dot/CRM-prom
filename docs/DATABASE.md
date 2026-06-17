@@ -269,3 +269,30 @@ Avisos internos:
 - `metadata`
 
 Las tablas nuevas tienen RLS, indices por organizacion y triggers de integridad tenant.
+
+## WebChat FASE 8
+
+### `webchat_widgets`
+
+Configuracion publica/privada del widget:
+
+- `organization_id`
+- `name`
+- `public_token`
+- `primary_color`
+- `initial_message`
+- `position`
+- `active`
+- `allowed_domains`
+- `assistant_id`
+
+### `conversations.webchat_widget_id`
+
+Referencia opcional al widget que inicio una conversacion `channel='webchat'`.
+
+### Seguridad
+
+- RLS en `webchat_widgets`.
+- Politicas de lectura por miembros y gestion por admins.
+- Trigger de integridad para validar `assistant_id` y `webchat_widget_id` dentro de la misma organizacion.
+- Indices por organizacion, token publico y widget de conversacion.

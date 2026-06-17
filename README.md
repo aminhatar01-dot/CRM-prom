@@ -60,6 +60,14 @@ SaaS CRM multi tenant construido con Next.js 15, Supabase y OpenAI.
 - Seguimientos manuales desde Inbox y ficha de lead.
 - Runner seguro con `send_message` mockeado y reglas desactivadas por defecto.
 
+## FASE 8
+
+- WebChat embebible con script publico `/widget/crm-pro-ai-widget.js`.
+- Configuracion en Settings > Channels > WebChat.
+- Endpoints publicos seguros para iniciar conversacion, enviar mensaje y consultar historial.
+- Creacion/actualizacion de leads/contactos desde WebChat.
+- Conversaciones `webchat` visibles en Inbox con respuesta manual e IA sugerida.
+
 ## Validacion
 
 ```bash
@@ -68,4 +76,4 @@ npm run build
 npm run test
 ```
 
-Consulta [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATABASE.md](docs/DATABASE.md), [docs/ROADMAP.md](docs/ROADMAP.md), [docs/AI_ORCHESTRATION.md](docs/AI_ORCHESTRATION.md), [docs/SMART_TAGS.md](docs/SMART_TAGS.md), [docs/VARIABLES.md](docs/VARIABLES.md), [docs/AUTOMATIONS.md](docs/AUTOMATIONS.md), [docs/PHASE_7_VALIDATION.md](docs/PHASE_7_VALIDATION.md), [docs/WHATSAPP_SETUP.md](docs/WHATSAPP_SETUP.md) y [docs/supabase-setup.md](docs/supabase-setup.md).
+Consulta [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATABASE.md](docs/DATABASE.md), [docs/ROADMAP.md](docs/ROADMAP.md), [docs/AI_ORCHESTRATION.md](docs/AI_ORCHESTRATION.md), [docs/SMART_TAGS.md](docs/SMART_TAGS.md), [docs/VARIABLES.md](docs/VARIABLES.md), [docs/AUTOMATIONS.md](docs/AUTOMATIONS.md), [docs/WEBCHAT.md](docs/WEBCHAT.md), [docs/PHASE_8_VALIDATION.md](docs/PHASE_8_VALIDATION.md), [docs/WHATSAPP_SETUP.md](docs/WHATSAPP_SETUP.md) y [docs/supabase-setup.md](docs/supabase-setup.md).

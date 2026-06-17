@@ -54,10 +54,16 @@
 - Scheduler cron protegido.
 - Tareas y notificaciones internas.
 
+### FASE 8
+
+- WebChat embebible.
+- Widget publico.
+- Endpoints publicos seguros.
+- Conversaciones WebChat en Inbox.
+
 ## Siguiente
 
-### FASE 8
+### FASE 9
 
 - Google Sheets.
 - HTTP Custom Connect.
-- WebChat embebible.

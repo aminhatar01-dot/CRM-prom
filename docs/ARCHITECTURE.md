@@ -89,3 +89,15 @@ Automatizaciones agregan:
 - UI en `/automations`
 
 Las reglas nacen en `draft`, el cron exige `CRON_SECRET` y `send_message` permanece mockeado para evitar envios automaticos reales.
+
+## FASE 8
+
+WebChat agrega:
+
+- `webchat_widgets`
+- `webchat_widget_id` en conversaciones
+- script publico `/widget/crm-pro-ai-widget.js`
+- endpoints `/api/webchat/start`, `/api/webchat/message` y `/api/webchat/history`
+- settings en `/settings/channels/webchat`
+
+Los endpoints publicos usan service role solo server-side, validan `public_token`, dominio permitido y rate limit basico. Las conversaciones y mensajes se guardan en las mismas tablas CRM para aparecer en Inbox.
