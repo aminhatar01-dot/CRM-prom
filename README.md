@@ -52,6 +52,14 @@ SaaS CRM multi tenant construido con Next.js 15, Supabase y OpenAI.
 - Logs de extraccion con confidence y source message.
 - Validacion por tipo y upsert sin duplicados.
 
+## FASE 7
+
+- CRUD de automatizaciones y historial de ejecuciones.
+- Scheduler inicial en `POST /api/cron/automations` protegido por `CRON_SECRET`.
+- Tareas y notificaciones internas por organizacion.
+- Seguimientos manuales desde Inbox y ficha de lead.
+- Runner seguro con `send_message` mockeado y reglas desactivadas por defecto.
+
 ## Validacion
 
 ```bash
@@ -60,4 +68,4 @@ npm run build
 npm run test
 ```
 
-Consulta [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATABASE.md](docs/DATABASE.md), [docs/ROADMAP.md](docs/ROADMAP.md), [docs/AI_ORCHESTRATION.md](docs/AI_ORCHESTRATION.md), [docs/SMART_TAGS.md](docs/SMART_TAGS.md), [docs/VARIABLES.md](docs/VARIABLES.md), [docs/PHASE_6_VALIDATION.md](docs/PHASE_6_VALIDATION.md), [docs/WHATSAPP_SETUP.md](docs/WHATSAPP_SETUP.md) y [docs/supabase-setup.md](docs/supabase-setup.md).
+Consulta [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATABASE.md](docs/DATABASE.md), [docs/ROADMAP.md](docs/ROADMAP.md), [docs/AI_ORCHESTRATION.md](docs/AI_ORCHESTRATION.md), [docs/SMART_TAGS.md](docs/SMART_TAGS.md), [docs/VARIABLES.md](docs/VARIABLES.md), [docs/AUTOMATIONS.md](docs/AUTOMATIONS.md), [docs/PHASE_7_VALIDATION.md](docs/PHASE_7_VALIDATION.md), [docs/WHATSAPP_SETUP.md](docs/WHATSAPP_SETUP.md) y [docs/supabase-setup.md](docs/supabase-setup.md).

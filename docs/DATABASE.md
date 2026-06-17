@@ -214,3 +214,58 @@ Registra cada intento:
 - `reason`
 - `input`
 - `output`
+
+## Automatizaciones FASE 7
+
+### `automation_rules`
+
+La tabla base se amplia con:
+
+- `description`
+- `status`: `draft`, `active`, `paused`, `archived`
+- `trigger_config`
+- `conditions`
+- `last_run_at`
+
+Las reglas quedan desactivadas por defecto.
+
+### `automation_runs`
+
+Registra ejecuciones:
+
+- `rule_id`
+- `trigger_type`
+- `status`: `pending`, `running`, `completed`, `failed`, `cancelled`
+- `context`
+- `result`
+- `error_message`
+- `scheduled_for`
+- `started_at`
+- `completed_at`
+
+### `tasks`
+
+Seguimientos internos:
+
+- `lead_id`
+- `conversation_id`
+- `owner_id`
+- `title`
+- `description`
+- `status`
+- `due_at`
+- `created_by`
+
+### `internal_notifications`
+
+Avisos internos:
+
+- `user_id`
+- `title`
+- `body`
+- `entity_table`
+- `entity_id`
+- `read_at`
+- `metadata`
+
+Las tablas nuevas tienen RLS, indices por organizacion y triggers de integridad tenant.

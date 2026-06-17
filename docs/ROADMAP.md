@@ -47,12 +47,14 @@
 - Valores por lead/conversacion.
 - Logs de extraccion.
 
-## Siguiente
-
 ### FASE 7
 
 - Automatizaciones.
-- Fallback avanzado y pausa IA.
+- Seguimientos manuales.
+- Scheduler cron protegido.
+- Tareas y notificaciones internas.
+
+## Siguiente
 
 ### FASE 8
 

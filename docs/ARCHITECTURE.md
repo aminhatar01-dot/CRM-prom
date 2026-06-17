@@ -76,3 +76,16 @@ Variables Inteligentes agregan:
 - `VariableExtractor`
 
 La extraccion automatica queda preparada pero desactivada. La UI ejecuta extracciones manuales desde Inbox y la ficha de lead.
+
+## FASE 7
+
+Automatizaciones agregan:
+
+- `automation_runs`
+- `tasks`
+- `internal_notifications`
+- runner seguro en `apps/web/src/lib/automation`
+- endpoint cron `POST /api/cron/automations`
+- UI en `/automations`
+
+Las reglas nacen en `draft`, el cron exige `CRON_SECRET` y `send_message` permanece mockeado para evitar envios automaticos reales.
