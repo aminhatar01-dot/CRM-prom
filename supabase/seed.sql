@@ -261,6 +261,105 @@ values (
 )
 on conflict (id) do nothing;
 
+insert into public.integrations (
+  id,
+  organization_id,
+  name,
+  description,
+  kind,
+  active,
+  config
+)
+values
+  (
+    '00000000-0000-4000-8000-000000000901',
+    '00000000-0000-4000-8000-000000000001',
+    'Custom Connect Demo',
+    'Herramienta HTTP mock para pruebas manuales.',
+    'custom_connect',
+    true,
+    '{}'
+  ),
+  (
+    '00000000-0000-4000-8000-000000000902',
+    '00000000-0000-4000-8000-000000000001',
+    'Google Sheets Demo',
+    'Busqueda demo de filas sin OAuth.',
+    'google_sheets',
+    true,
+    '{"spreadsheet_url":"demo://leads"}'
+  )
+on conflict (id) do nothing;
+
+insert into public.integration_tools (
+  id,
+  organization_id,
+  integration_id,
+  name,
+  description,
+  type,
+  method,
+  url,
+  headers_schema,
+  body_schema,
+  response_schema,
+  active,
+  timeout_ms,
+  config
+)
+values
+  (
+    '00000000-0000-4000-8000-000000000911',
+    '00000000-0000-4000-8000-000000000001',
+    '00000000-0000-4000-8000-000000000901',
+    'Buscar CRM externo demo',
+    'Devuelve respuesta mock para validar Custom Connect.',
+    'custom_connect',
+    'POST',
+    'mock://success',
+    '{}',
+    '{"query":"string"}',
+    '{"ok":"boolean"}',
+    true,
+    3000,
+    '{}'
+  ),
+  (
+    '00000000-0000-4000-8000-000000000912',
+    '00000000-0000-4000-8000-000000000001',
+    '00000000-0000-4000-8000-000000000902',
+    'Buscar Google Sheets demo',
+    'Busca filas por texto en modo demo.',
+    'google_sheets',
+    null,
+    null,
+    '{}',
+    '{"query":"string"}',
+    '{"rows":"array"}',
+    true,
+    3000,
+    '{"spreadsheet_url":"demo://leads"}'
+  )
+on conflict (id) do nothing;
+
+insert into public.google_sheets_connections (
+  id,
+  organization_id,
+  integration_id,
+  spreadsheet_url,
+  sheet_name,
+  active
+)
+values (
+  '00000000-0000-4000-8000-000000000921',
+  '00000000-0000-4000-8000-000000000001',
+  '00000000-0000-4000-8000-000000000902',
+  'demo://leads',
+  null,
+  true
+)
+on conflict (organization_id, integration_id) do nothing;
+
 insert into public.variables (
   id,
   organization_id,
