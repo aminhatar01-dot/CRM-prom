@@ -5,6 +5,9 @@
   "type": "module",
   "exports": {
     "./tools": "./src/tools.ts",
+    "./custom-connect-executor": "./src/custom-connect-executor.ts",
+    "./google-sheets-connector": "./src/google-sheets-connector.ts",
+    "./tool-executor": "./src/tool-executor.ts",
     "./whatsapp": "./src/whatsapp.ts",
     "./whatsapp-cloud-service": "./src/whatsapp-cloud-service.ts",
     "./webchat": "./src/webchat.ts"
