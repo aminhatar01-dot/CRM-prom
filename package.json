@@ -8,6 +8,9 @@
     "build": "npm run build --workspaces --if-present",
     "lint": "eslint apps/web/src apps/web/tests packages --max-warnings=0",
     "test": "vitest run",
+    "validate": "npm run lint && npm run build && npm run test",
+    "db:push": "npx supabase db push",
+    "db:seed": "npx supabase db reset --local",
     "format": "prettier . --write",
     "typecheck": "tsc --build --pretty"
   },

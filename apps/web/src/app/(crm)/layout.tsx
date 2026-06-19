@@ -1,27 +1,15 @@
 import Link from "next/link";
-import { Bot, Braces, LayoutDashboard, MessageSquareText, Plug, Settings, Sparkles, Tags, UsersRound, Workflow } from "lucide-react";
+import { Bot } from "lucide-react";
 import { Button } from "@crm-pro-ai/ui/button";
 import { requireUser } from "@/lib/auth";
+import { navigationForRole } from "@/lib/navigation/main-nav";
 import { getActiveOrganization } from "@/lib/organization";
 import { signOut } from "../dashboard/actions";
 
 export default async function CrmLayout({ children }: { children: React.ReactNode }) {
   const { supabase, user } = await requireUser();
   const organization = await getActiveOrganization(supabase, user);
-
-  const nav = [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/leads", label: "Leads", icon: UsersRound },
-    { href: "/contacts", label: "Contactos", icon: UsersRound },
-    { href: "/inbox", label: "Inbox", icon: MessageSquareText },
-    { href: "/assistants", label: "Asistentes", icon: Sparkles },
-    { href: "/smart-tags", label: "Smart Tags", icon: Tags },
-    { href: "/variables", label: "Variables", icon: Braces },
-    { href: "/automations", label: "Automatizaciones", icon: Workflow },
-    { href: "/integrations", label: "Integraciones", icon: Plug },
-    { href: "/settings/channels/webchat", label: "WebChat", icon: MessageSquareText },
-    { href: "/settings/channels/whatsapp", label: "WhatsApp", icon: Settings }
-  ];
+  const nav = navigationForRole(organization.role);
 
   return (
     <main className="min-h-screen bg-background">
