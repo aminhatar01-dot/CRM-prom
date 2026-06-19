@@ -68,9 +68,16 @@
 - ToolExecutor.
 - Logs de ejecucion.
 
+### FASE 10
+
+- Hardening MVP.
+- Healthcheck y System Status.
+- Deploy Vercel/Supabase.
+- Checklist produccion.
+
 ## Siguiente
 
-### FASE 10
+### FASE 11
 
 - WebChat avanzado.
 - Ejecucion controlada de tools por IA.

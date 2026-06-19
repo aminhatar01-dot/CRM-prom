@@ -116,3 +116,16 @@ Integraciones agregan:
 - `GoogleSheetsConnector`
 
 El AIOrchestrator recibe herramientas activas como contexto disponible, pero no las ejecuta automaticamente. Las ejecuciones quedan restringidas a pruebas manuales desde `/integrations`.
+
+## FASE 10
+
+Hardening de produccion agrega:
+
+- `GET /api/health`
+- Settings > System Status
+- validacion centralizada de env vars
+- scripts `db:push`, `db:seed` y `validate`
+- permisos de navegacion por rol
+- contrato automatizado de RLS en tests
+
+El objetivo de esta fase es preparar el MVP para Vercel/Supabase sin activar envios automaticos reales ni ejecucion autonoma de tools.
