@@ -1,7 +1,9 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { getRequestOrigin } from "@/lib/auth-flow";
 import { createClient } from "@/lib/supabase/server";
 
 const loginSchema = z.object({
@@ -18,17 +20,18 @@ export async function signInWithEmail(formData: FormData) {
   }
 
   const supabase = await createClient();
-  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const origin = getRequestOrigin(await headers());
 
   const { error } = await supabase.auth.signInWithOtp({
     email: parsed.data.email,
     options: {
-      emailRedirectTo: `${origin}/auth/callback`
+      emailRedirectTo: `${origin}/auth/callback`,
+      shouldCreateUser: true
     }
   });
 
   if (error) {
-    redirect("/login?error=auth");
+    redirect(`/login?error=${error.status === 429 ? "rate-limit" : "auth"}`);
   }
 
   redirect("/login?sent=1");

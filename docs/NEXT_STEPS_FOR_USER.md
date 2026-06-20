@@ -61,6 +61,14 @@ En el dashboard revisar:
 8. Desplegar y actualizar `NEXT_PUBLIC_APP_URL` con el dominio HTTPS final.
 9. Agregar el dominio final a Supabase Auth Redirect URLs.
 
+Para el dominio actual:
+
+```text
+NEXT_PUBLIC_APP_URL=https://crm-prom.vercel.app
+Site URL=https://crm-prom.vercel.app
+Redirect URL=https://crm-prom.vercel.app/auth/callback
+```
+
 ## Meta y WhatsApp
 
 1. Crear o abrir la app en Meta Developers.

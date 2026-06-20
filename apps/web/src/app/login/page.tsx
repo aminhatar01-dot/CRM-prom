@@ -11,6 +11,7 @@ export default async function LoginPage({
   searchParams: Promise<{ sent?: string; error?: string }>;
 }) {
   const params = await searchParams;
+  const errorMessage = loginErrorMessage(params.error);
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4 py-10">
@@ -29,9 +30,9 @@ export default async function LoginPage({
                 Te enviamos un enlace de acceso.
               </p>
             ) : null}
-            {params.error ? (
+            {errorMessage ? (
               <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">
-                No pudimos iniciar sesión. Revisá el email e intentá de nuevo.
+                {errorMessage}
               </p>
             ) : null}
             <Button type="submit" className="w-full">
@@ -43,4 +44,18 @@ export default async function LoginPage({
       </Card>
     </main>
   );
+}
+
+function loginErrorMessage(error?: string) {
+  if (!error) return null;
+  if (error === "invalid-email") return "Ingresa un email valido.";
+  if (error === "rate-limit") return "Espera un minuto antes de solicitar otro enlace.";
+  if (error === "missing-code") return "El enlace esta incompleto. Solicita uno nuevo.";
+  if (error === "callback" || error === "session") {
+    return "El enlace vencio o ya fue utilizado. Solicita uno nuevo desde este navegador.";
+  }
+  if (error === "membership") {
+    return "La sesion se creo, pero no pudimos consultar tu organizacion. Intenta nuevamente.";
+  }
+  return "No pudimos iniciar sesion. Revisa el email e intenta de nuevo.";
 }

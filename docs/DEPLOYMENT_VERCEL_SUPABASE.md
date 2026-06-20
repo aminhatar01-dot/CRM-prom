@@ -79,6 +79,18 @@ WHATSAPP_APP_SECRET=
 WHATSAPP_GRAPH_API_VERSION=v23.0
 ```
 
+Para este deployment:
+
+```bash
+NEXT_PUBLIC_APP_URL=https://crm-prom.vercel.app
+```
+
+En Supabase Authentication > URL Configuration:
+
+- Site URL: `https://crm-prom.vercel.app`
+- Redirect URL: `https://crm-prom.vercel.app/auth/callback`
+- Mantener `http://localhost:3000/auth/callback` para desarrollo local.
+
 ## 4. WhatsApp webhooks
 
 Configurar en Meta:

@@ -18,7 +18,24 @@ supabase db push
 En Supabase Auth configurar las URLs permitidas:
 
 - `http://localhost:3000/auth/callback`
-- `https://<tu-dominio-vercel>/auth/callback`
+- `https://crm-prom.vercel.app/auth/callback`
+
+En Supabase Dashboard > Authentication > URL Configuration:
+
+- Site URL: `https://crm-prom.vercel.app`
+- Redirect URLs:
+  - `https://crm-prom.vercel.app/auth/callback`
+  - `http://localhost:3000/auth/callback`
+
+En Vercel configurar:
+
+```bash
+NEXT_PUBLIC_APP_URL=https://crm-prom.vercel.app
+NEXT_PUBLIC_SUPABASE_URL=https://widehqbtmqiebaowidav.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-o-publishable-key>
+```
+
+El magic link debe abrirse en el mismo navegador donde se solicito para conservar el verificador PKCE. Si el enlace expiro o ya fue usado, solicitar uno nuevo y esperar al menos 60 segundos antes de repetir.
 
 ## RLS
 
