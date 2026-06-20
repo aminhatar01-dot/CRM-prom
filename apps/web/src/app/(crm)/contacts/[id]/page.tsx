@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { MessageSquarePlus, Pencil } from "lucide-react";
+import { Archive, MessageSquarePlus, Pencil } from "lucide-react";
 import { Button } from "@crm-pro-ai/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@crm-pro-ai/ui/card";
-import { createConversation } from "@/app/actions/crm";
+import { archiveContact, createConversation } from "@/app/actions/crm";
 import { requireUser } from "@/lib/auth";
 import { getActiveOrganization } from "@/lib/organization";
 
@@ -27,6 +27,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
     .select("id, first_name, last_name, email, phone, company, location, owner_id, notes")
     .eq("id", id)
     .eq("organization_id", organization.id)
+    .is("archived_at", null)
     .single<ContactDetail>();
 
   if (!contact) return <section className="p-6">Contacto no encontrado.</section>;
@@ -56,6 +57,14 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
             <Button type="submit">
               <MessageSquarePlus className="size-4" />
               Conversacion
+            </Button>
+          </form>
+          <form action={archiveContact}>
+            <input type="hidden" name="id" value={contact.id} />
+            <input type="hidden" name="return_to" value="/contacts" />
+            <Button type="submit" variant="outline">
+              <Archive className="size-4" />
+              Archivar
             </Button>
           </form>
         </div>

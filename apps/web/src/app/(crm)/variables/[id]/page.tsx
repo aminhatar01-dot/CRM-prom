@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Pencil } from "lucide-react";
+import { Archive, Pencil } from "lucide-react";
 import { Button } from "@crm-pro-ai/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@crm-pro-ai/ui/card";
 import { requireUser } from "@/lib/auth";
@@ -35,6 +35,7 @@ export default async function VariableDetailPage({ params }: { params: Promise<{
       .select("id, name, key, description, type, extraction_prompt, active, required, options")
       .eq("id", id)
       .eq("organization_id", organization.id)
+      .is("archived_at", null)
       .single<VariableDetail>(),
     supabase
       .from("variable_extraction_logs")
@@ -55,12 +56,21 @@ export default async function VariableDetailPage({ params }: { params: Promise<{
           <h1 className="text-2xl font-semibold tracking-normal">{variable.name}</h1>
           <p className="text-sm text-muted-foreground">{variable.key} · {variable.type}</p>
         </div>
-        <Button asChild variant="outline">
-          <Link href={`/variables/${variable.id}/edit`}>
-            <Pencil className="size-4" />
-            Editar
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link href={`/variables/${variable.id}/edit`}>
+              <Pencil className="size-4" />
+              Editar
+            </Link>
+          </Button>
+          <form action={archiveVariable}>
+            <input type="hidden" name="id" value={variable.id} />
+            <Button type="submit" variant="outline">
+              <Archive className="size-4" />
+              Archivar
+            </Button>
+          </form>
+        </div>
       </div>
       <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
         <Card>
@@ -96,3 +106,4 @@ export default async function VariableDetailPage({ params }: { params: Promise<{
     </section>
   );
 }
+import { archiveVariable } from "@/app/actions/variables";

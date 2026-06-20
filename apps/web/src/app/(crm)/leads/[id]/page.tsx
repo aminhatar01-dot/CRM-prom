@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { Bell, Braces, MessageSquarePlus, Pencil, UserRoundCheck } from "lucide-react";
+import { Archive, Bell, Braces, MessageSquarePlus, Pencil, UserRoundCheck } from "lucide-react";
 import { Button } from "@crm-pro-ai/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@crm-pro-ai/ui/card";
 import { Input } from "@crm-pro-ai/ui/input";
 import { createManualFollowUp } from "@/app/actions/automations";
-import { createConversation, convertLeadToContact } from "@/app/actions/crm";
+import { archiveLead, createConversation, convertLeadToContact } from "@/app/actions/crm";
 import { assignSmartTag } from "@/app/actions/smart-tags";
 import { extractLeadVariables } from "@/app/actions/variables";
 import { requireUser } from "@/lib/auth";
@@ -74,12 +74,14 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
       .select("id, first_name, last_name, email, phone, company, source, status, owner_id, notes, contact_id")
       .eq("id", id)
       .eq("organization_id", organization.id)
+      .is("archived_at", null)
       .single<LeadDetail>(),
     supabase
       .from("tags")
       .select("id, name, color")
       .eq("organization_id", organization.id)
       .eq("active", true)
+      .is("archived_at", null)
       .order("name")
       .returns<SmartTagOption[]>(),
     supabase
@@ -153,6 +155,14 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
               </Button>
             </form>
           ) : null}
+          <form action={archiveLead}>
+            <input type="hidden" name="id" value={lead.id} />
+            <input type="hidden" name="return_to" value="/leads" />
+            <Button type="submit" variant="outline">
+              <Archive className="size-4" />
+              Archivar
+            </Button>
+          </form>
         </div>
       </div>
       <div className="grid gap-4 md:grid-cols-3">

@@ -12,6 +12,7 @@ export default async function EditSmartTagPage({ params }: { params: Promise<{ i
     .select("id, name, color, description, classification_prompt, active, auto_pause_assistant, notify_team")
     .eq("id", id)
     .eq("organization_id", organization.id)
+    .is("archived_at", null)
     .single();
 
   if (!tag) return <section className="p-6">Smart Tag no encontrado.</section>;

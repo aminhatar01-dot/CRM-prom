@@ -6,6 +6,7 @@ import { z } from "zod";
 import { assistantFormSchema, assistantTestSchema } from "@crm-pro-ai/ai/assistant";
 import { AIOrchestrator } from "@crm-pro-ai/ai/orchestrator";
 import { requireUser } from "@/lib/auth";
+import { actionErrorCode } from "@/lib/action-errors";
 import { getServerEnv } from "@/lib/env";
 import { buildConversationAIContext, mapAssistant, type AssistantRow } from "@/lib/ai/context";
 import { loadAvailableAITools } from "@/lib/ai/tools";
@@ -52,8 +53,9 @@ export async function createAssistant(formData: FormData) {
     .select("id")
     .single<{ id: string }>();
 
-  if (error || !data) redirect("/assistants/new?error=create");
+  if (error || !data) redirect(`/assistants/new?error=${actionErrorCode(error)}`);
 
+  await writeAudit(supabase, user.id, organization.id, "create_assistant", data.id);
   revalidatePath("/assistants");
   redirect(`/assistants/${data.id}`);
 }
@@ -66,7 +68,7 @@ export async function updateAssistant(formData: FormData) {
 
   const { supabase, user } = await requireUser();
   const organization = await getActiveOrganization(supabase, user);
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("ai_assistants")
     .update({
       ...parsed.data,
@@ -74,10 +76,15 @@ export async function updateAssistant(formData: FormData) {
       enabled: parsed.data.active
     })
     .eq("id", id)
-    .eq("organization_id", organization.id);
+    .eq("organization_id", organization.id)
+    .is("archived_at", null)
+    .select("id")
+    .maybeSingle<{ id: string }>();
 
-  if (error) redirect(`/assistants/${id}/edit?error=update`);
+  if (error) redirect(`/assistants/${id}/edit?error=${actionErrorCode(error)}`);
+  if (!updated) redirect(`/assistants/${id}/edit?error=not-found`);
 
+  await writeAudit(supabase, user.id, organization.id, "update_assistant", id);
   revalidatePath("/assistants");
   revalidatePath(`/assistants/${id}`);
   redirect(`/assistants/${id}`);
@@ -98,6 +105,7 @@ export async function runAssistantTest(formData: FormData) {
     .select("id, organization_id, name, description, prompt, objective, tone, rules, fallback_message, active, channel_id, auto_reply_enabled")
     .eq("id", parsed.data.assistant_id)
     .eq("organization_id", organization.id)
+    .is("archived_at", null)
     .single<AssistantRow>();
 
   if (!assistantRow) redirect(`/assistants/${parsed.data.assistant_id}?error=missing`);
@@ -184,6 +192,7 @@ export async function suggestConversationReply(formData: FormData) {
     .select("id, organization_id, name, description, prompt, objective, tone, rules, fallback_message, active, channel_id, auto_reply_enabled")
     .eq("organization_id", organization.id)
     .eq("active", true)
+    .is("archived_at", null)
     .limit(1);
 
   if (parsed.data.assistant_id) {
@@ -234,4 +243,43 @@ export async function suggestConversationReply(formData: FormData) {
   } catch {
     redirect(`/inbox?conversation=${parsed.data.conversation_id}&error=ai-suggestion`);
   }
+}
+
+export async function archiveAssistant(formData: FormData) {
+  const parsed = assistantIdSchema.safeParse({ id: value(formData, "id") });
+  if (!parsed.success) redirect("/assistants?error=invalid");
+
+  const { supabase, user } = await requireUser();
+  const organization = await getActiveOrganization(supabase, user);
+  const { data, error } = await supabase
+    .from("ai_assistants")
+    .update({ archived_at: new Date().toISOString(), active: false, enabled: false })
+    .eq("id", parsed.data.id)
+    .eq("organization_id", organization.id)
+    .is("archived_at", null)
+    .select("id")
+    .maybeSingle<{ id: string }>();
+
+  if (error) redirect(`/assistants?error=${actionErrorCode(error)}`);
+  if (!data) redirect("/assistants?error=not-found");
+
+  await writeAudit(supabase, user.id, organization.id, "archive_assistant", parsed.data.id);
+  revalidatePath("/assistants");
+  redirect("/assistants?success=archived");
+}
+
+async function writeAudit(
+  supabase: Awaited<ReturnType<typeof requireUser>>["supabase"],
+  userId: string,
+  organizationId: string,
+  action: string,
+  entityId: string,
+) {
+  await supabase.from("audit_logs").insert({
+    organization_id: organizationId,
+    actor_user_id: userId,
+    action,
+    entity_table: "ai_assistants",
+    entity_id: entityId
+  });
 }

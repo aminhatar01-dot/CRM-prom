@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Pencil } from "lucide-react";
+import { Archive, Pencil } from "lucide-react";
 import { Button } from "@crm-pro-ai/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@crm-pro-ai/ui/card";
 import { requireUser } from "@/lib/auth";
@@ -34,6 +34,7 @@ export default async function SmartTagDetailPage({ params }: { params: Promise<{
       .select("id, name, color, description, classification_prompt, active, auto_pause_assistant, notify_team")
       .eq("id", id)
       .eq("organization_id", organization.id)
+      .is("archived_at", null)
       .single<SmartTagDetail>(),
     supabase
       .from("smart_tag_classification_logs")
@@ -57,12 +58,21 @@ export default async function SmartTagDetailPage({ params }: { params: Promise<{
           </div>
           <p className="mt-1 text-sm text-muted-foreground">{tag.description ?? "Sin descripcion"}</p>
         </div>
-        <Button asChild variant="outline">
-          <Link href={`/smart-tags/${tag.id}/edit`}>
-            <Pencil className="size-4" />
-            Editar
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link href={`/smart-tags/${tag.id}/edit`}>
+              <Pencil className="size-4" />
+              Editar
+            </Link>
+          </Button>
+          <form action={archiveSmartTag}>
+            <input type="hidden" name="id" value={tag.id} />
+            <Button type="submit" variant="outline">
+              <Archive className="size-4" />
+              Archivar
+            </Button>
+          </form>
+        </div>
       </div>
       <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
         <Card>
@@ -97,3 +107,4 @@ export default async function SmartTagDetailPage({ params }: { params: Promise<{
     </section>
   );
 }
+import { archiveSmartTag } from "@/app/actions/smart-tags";

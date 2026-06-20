@@ -12,6 +12,7 @@ export default async function EditVariablePage({ params }: { params: Promise<{ i
     .select("id, name, key, description, type, extraction_prompt, active, required, options")
     .eq("id", id)
     .eq("organization_id", organization.id)
+    .is("archived_at", null)
     .single();
 
   if (!variable) return <section className="p-6">Variable no encontrada.</section>;

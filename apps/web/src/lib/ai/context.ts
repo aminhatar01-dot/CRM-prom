@@ -97,12 +97,14 @@ export async function buildConversationAIContext({
       )
       .eq("id", conversationId)
       .eq("organization_id", organizationId)
+      .is("archived_at", null)
       .single<ConversationContextRow>(),
     supabase
       .from("messages")
       .select("direction, body, channel, status, created_at")
       .eq("conversation_id", conversationId)
       .eq("organization_id", organizationId)
+      .is("archived_at", null)
       .order("created_at", { ascending: false })
       .limit(12)
       .returns<MessageRow[]>()

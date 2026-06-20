@@ -28,6 +28,7 @@ export default async function ContactsPage({
     .from("contacts")
     .select("id, first_name, last_name, email, phone, company, owner_id")
     .eq("organization_id", organization.id)
+    .is("archived_at", null)
     .order("created_at", { ascending: false });
 
   if (params.q) {

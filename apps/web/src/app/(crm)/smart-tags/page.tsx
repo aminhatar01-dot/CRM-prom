@@ -22,6 +22,7 @@ export default async function SmartTagsPage() {
     .from("tags")
     .select("id, name, color, description, active, auto_pause_assistant, notify_team")
     .eq("organization_id", organization.id)
+    .is("archived_at", null)
     .order("created_at", { ascending: false })
     .returns<SmartTagRow[]>();
 

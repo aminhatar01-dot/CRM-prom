@@ -22,6 +22,7 @@ export default async function AssistantsPage() {
     .from("ai_assistants")
     .select("id, name, description, tone, active, channel_id, created_at")
     .eq("organization_id", organization.id)
+    .is("archived_at", null)
     .order("created_at", { ascending: false })
     .returns<AssistantRow[]>();
 

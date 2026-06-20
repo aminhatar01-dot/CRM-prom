@@ -49,15 +49,18 @@ export default async function DashboardPage() {
     supabase
       .from("leads")
       .select("*", { count: "exact", head: true })
-      .eq("organization_id", organization.id),
+      .eq("organization_id", organization.id)
+      .is("archived_at", null),
     supabase
       .from("conversations")
       .select("*", { count: "exact", head: true })
-      .eq("organization_id", organization.id),
+      .eq("organization_id", organization.id)
+      .is("archived_at", null),
     supabase
       .from("tags")
       .select("*", { count: "exact", head: true })
       .eq("organization_id", organization.id)
+      .is("archived_at", null)
   ]);
 
   const stats = [

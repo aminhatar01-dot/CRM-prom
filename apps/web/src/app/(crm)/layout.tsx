@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { Bot } from "lucide-react";
 import { Button } from "@crm-pro-ai/ui/button";
 import { requireUser } from "@/lib/auth";
 import { navigationForRole } from "@/lib/navigation/main-nav";
 import { getActiveOrganization } from "@/lib/organization";
 import { signOut } from "../dashboard/actions";
+import { ActionNotice } from "./_components/action-notice";
 
 export default async function CrmLayout({ children }: { children: React.ReactNode }) {
   const { supabase, user } = await requireUser();
@@ -45,6 +47,9 @@ export default async function CrmLayout({ children }: { children: React.ReactNod
             </Button>
           </form>
         </header>
+        <Suspense>
+          <ActionNotice />
+        </Suspense>
         {children}
       </section>
     </main>

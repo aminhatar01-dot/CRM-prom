@@ -9,10 +9,12 @@ import {
   conversationUpdateSchema,
   leadInputSchema,
   leadUpdateSchema,
-  messageInputSchema
+  messageInputSchema,
+  messageUpdateSchema
 } from "@crm-pro-ai/database/crm";
 import { WhatsAppCloudService } from "@crm-pro-ai/integrations/whatsapp-cloud-service";
 import { requireUser } from "@/lib/auth";
+import { actionErrorCode, addQueryParam } from "@/lib/action-errors";
 import { getServerEnv } from "@/lib/env";
 import { getActiveOrganization } from "@/lib/organization";
 import { z } from "zod";
@@ -57,6 +59,11 @@ const whatsappSettingsSchema = z.object({
   enabled: z.boolean().default(false)
 });
 
+const archiveSchema = z.object({
+  id: z.string().uuid(),
+  return_to: z.string().startsWith("/").max(300)
+});
+
 export async function createLead(formData: FormData) {
   const parsed = leadInputSchema.safeParse(leadPayload(formData));
   if (!parsed.success) redirect("/leads/new?error=invalid");
@@ -74,8 +81,9 @@ export async function createLead(formData: FormData) {
     .select("id")
     .single();
 
-  if (error || !data) redirect("/leads/new?error=create");
+  if (error || !data) redirect(`/leads/new?error=${actionErrorCode(error)}`);
 
+  await audit("create_lead", "leads", data.id, organization.id);
   revalidatePath("/leads");
   redirect(`/leads/${data.id}`);
 }
@@ -91,17 +99,22 @@ export async function updateLead(formData: FormData) {
   const organization = await getActiveOrganization(supabase, user);
   const fullName = [parsed.data.first_name, parsed.data.last_name].filter(Boolean).join(" ");
   const { id, ...payload } = parsed.data;
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("leads")
     .update({
       ...payload,
       title: fullName
     })
     .eq("id", id)
-    .eq("organization_id", organization.id);
+    .eq("organization_id", organization.id)
+    .is("archived_at", null)
+    .select("id")
+    .maybeSingle<{ id: string }>();
 
-  if (error) redirect(`/leads/${id}/edit?error=update`);
+  if (error) redirect(`/leads/${id}/edit?error=${actionErrorCode(error)}`);
+  if (!updated) redirect(`/leads/${id}/edit?error=not-found`);
 
+  await audit("update_lead", "leads", id, organization.id);
   revalidatePath("/leads");
   revalidatePath(`/leads/${id}`);
   redirect(`/leads/${id}`);
@@ -116,6 +129,7 @@ export async function convertLeadToContact(formData: FormData) {
     .select("id, first_name, last_name, email, phone, company, owner_id, notes")
     .eq("id", leadId)
     .eq("organization_id", organization.id)
+    .is("archived_at", null)
     .single();
 
   if (!lead) redirect(`/leads/${leadId}?error=missing-lead`);
@@ -138,14 +152,18 @@ export async function convertLeadToContact(formData: FormData) {
     .select("id")
     .single();
 
-  if (error || !contact) redirect(`/leads/${leadId}?error=convert`);
+  if (error || !contact) redirect(`/leads/${leadId}?error=${actionErrorCode(error)}`);
 
-  await supabase
+  const { error: leadUpdateError } = await supabase
     .from("leads")
     .update({ contact_id: contact.id, status: "ganado" })
     .eq("id", lead.id)
     .eq("organization_id", organization.id);
+  if (leadUpdateError) redirect(`/leads/${leadId}?error=${actionErrorCode(leadUpdateError)}`);
 
+  await audit("convert_lead_to_contact", "leads", lead.id, organization.id, {
+    contact_id: contact.id
+  });
   revalidatePath("/contacts");
   redirect(`/contacts/${contact.id}`);
 }
@@ -167,8 +185,9 @@ export async function createContact(formData: FormData) {
     .select("id")
     .single();
 
-  if (error || !data) redirect("/contacts/new?error=create");
+  if (error || !data) redirect(`/contacts/new?error=${actionErrorCode(error)}`);
 
+  await audit("create_contact", "contacts", data.id, organization.id);
   revalidatePath("/contacts");
   redirect(`/contacts/${data.id}`);
 }
@@ -184,17 +203,22 @@ export async function updateContact(formData: FormData) {
   const organization = await getActiveOrganization(supabase, user);
   const { id, ...payload } = parsed.data;
   const fullName = [payload.first_name, payload.last_name].filter(Boolean).join(" ");
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("contacts")
     .update({
       ...payload,
       full_name: fullName
     })
     .eq("id", id)
-    .eq("organization_id", organization.id);
+    .eq("organization_id", organization.id)
+    .is("archived_at", null)
+    .select("id")
+    .maybeSingle<{ id: string }>();
 
-  if (error) redirect(`/contacts/${id}/edit?error=update`);
+  if (error) redirect(`/contacts/${id}/edit?error=${actionErrorCode(error)}`);
+  if (!updated) redirect(`/contacts/${id}/edit?error=not-found`);
 
+  await audit("update_contact", "contacts", id, organization.id);
   revalidatePath("/contacts");
   revalidatePath(`/contacts/${id}`);
   redirect(`/contacts/${id}`);
@@ -223,8 +247,9 @@ export async function createConversation(formData: FormData) {
     .select("id")
     .single();
 
-  if (error || !data) redirect(`${fallback}?error=create-conversation`);
+  if (error || !data) redirect(addQueryParam(fallback, "error", actionErrorCode(error)));
 
+  await audit("create_conversation", "conversations", data.id, organization.id);
   revalidatePath("/inbox");
   redirect(`/inbox?conversation=${data.id}`);
 }
@@ -241,14 +266,19 @@ export async function updateConversation(formData: FormData) {
   const { supabase, user } = await requireUser();
   const organization = await getActiveOrganization(supabase, user);
   const { id, ...payload } = parsed.data;
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("conversations")
     .update(payload)
     .eq("id", id)
-    .eq("organization_id", organization.id);
+    .eq("organization_id", organization.id)
+    .is("archived_at", null)
+    .select("id")
+    .maybeSingle<{ id: string }>();
 
-  if (error) redirect(`/inbox?conversation=${id}&error=update-conversation`);
+  if (error) redirect(`/inbox?conversation=${id}&error=${actionErrorCode(error)}`);
+  if (!updated) redirect("/inbox?error=not-found");
 
+  await audit("update_conversation", "conversations", id, organization.id);
   revalidatePath("/inbox");
   redirect(`/inbox?conversation=${id}`);
 }
@@ -270,6 +300,7 @@ export async function createMessage(formData: FormData) {
     .select("id, organization_id, channel, contacts(phone), leads(phone)")
     .eq("id", parsed.data.conversation_id)
     .eq("organization_id", organization.id)
+    .is("archived_at", null)
     .single<{
       id: string;
       organization_id: string;
@@ -294,7 +325,9 @@ export async function createMessage(formData: FormData) {
     .select("id")
     .single<{ id: string }>();
 
-  if (error || !createdMessage) redirect(`/inbox?conversation=${conversation.id}&error=create-message`);
+  if (error || !createdMessage) {
+    redirect(`/inbox?conversation=${conversation.id}&error=${actionErrorCode(error)}`);
+  }
 
   if (conversation.channel === "whatsapp" && parsed.data.direction === "outbound") {
     await sendWhatsAppMessage({
@@ -305,8 +338,45 @@ export async function createMessage(formData: FormData) {
     });
   }
 
+  await audit("create_message", "messages", createdMessage.id, organization.id, {
+    conversation_id: conversation.id,
+    direction: parsed.data.direction,
+    channel: conversation.channel
+  });
   revalidatePath("/inbox");
   redirect(`/inbox?conversation=${conversation.id}`);
+}
+
+export async function updateMessage(formData: FormData) {
+  const parsed = messageUpdateSchema.safeParse({
+    id: value(formData, "id"),
+    conversation_id: value(formData, "conversation_id"),
+    body: value(formData, "body")
+  });
+  if (!parsed.success) redirect("/inbox?error=invalid");
+
+  const { supabase, user } = await requireUser();
+  const organization = await getActiveOrganization(supabase, user);
+  const { data, error } = await supabase
+    .from("messages")
+    .update({ body: parsed.data.body })
+    .eq("id", parsed.data.id)
+    .eq("conversation_id", parsed.data.conversation_id)
+    .eq("organization_id", organization.id)
+    .is("archived_at", null)
+    .select("id")
+    .maybeSingle<{ id: string }>();
+
+  if (error) {
+    redirect(`/inbox?conversation=${parsed.data.conversation_id}&error=${actionErrorCode(error)}`);
+  }
+  if (!data) redirect(`/inbox?conversation=${parsed.data.conversation_id}&error=not-found`);
+
+  await audit("update_message", "messages", parsed.data.id, organization.id, {
+    conversation_id: parsed.data.conversation_id
+  });
+  revalidatePath("/inbox");
+  redirect(`/inbox?conversation=${parsed.data.conversation_id}&success=updated`);
 }
 
 export async function saveWhatsAppSettings(formData: FormData) {
@@ -336,6 +406,52 @@ export async function saveWhatsAppSettings(formData: FormData) {
 
   revalidatePath("/settings/channels/whatsapp");
   redirect("/settings/channels/whatsapp?saved=1");
+}
+
+export async function archiveLead(formData: FormData) {
+  return archiveRecord(formData, "leads", "/leads");
+}
+
+export async function archiveContact(formData: FormData) {
+  return archiveRecord(formData, "contacts", "/contacts");
+}
+
+export async function archiveConversation(formData: FormData) {
+  return archiveRecord(formData, "conversations", "/inbox");
+}
+
+export async function archiveMessage(formData: FormData) {
+  return archiveRecord(formData, "messages", "/inbox");
+}
+
+async function archiveRecord(
+  formData: FormData,
+  table: "leads" | "contacts" | "conversations" | "messages",
+  defaultReturnTo: string,
+) {
+  const parsed = archiveSchema.safeParse({
+    id: value(formData, "id"),
+    return_to: value(formData, "return_to") || defaultReturnTo
+  });
+  if (!parsed.success) redirect(addQueryParam(defaultReturnTo, "error", "invalid"));
+
+  const { supabase, user } = await requireUser();
+  const organization = await getActiveOrganization(supabase, user);
+  const { data, error } = await supabase
+    .from(table)
+    .update({ archived_at: new Date().toISOString() })
+    .eq("id", parsed.data.id)
+    .eq("organization_id", organization.id)
+    .is("archived_at", null)
+    .select("id")
+    .maybeSingle<{ id: string }>();
+
+  if (error) redirect(addQueryParam(parsed.data.return_to, "error", actionErrorCode(error)));
+  if (!data) redirect(addQueryParam(parsed.data.return_to, "error", "not-found"));
+
+  await audit(`archive_${table}`, table, parsed.data.id, organization.id);
+  revalidatePath(defaultReturnTo);
+  redirect(addQueryParam(parsed.data.return_to, "success", "archived"));
 }
 
 async function sendWhatsAppMessage({
@@ -431,4 +547,22 @@ async function sendWhatsAppMessage({
       error_message: errorMessage
     });
   }
+}
+
+async function audit(
+  action: string,
+  entityTable: string,
+  entityId: string | undefined,
+  organizationId: string,
+  metadata: Record<string, unknown> = {},
+) {
+  const { supabase, user } = await requireUser();
+  await supabase.from("audit_logs").insert({
+    organization_id: organizationId,
+    actor_user_id: user.id,
+    action,
+    entity_table: entityTable,
+    entity_id: entityId,
+    metadata
+  });
 }

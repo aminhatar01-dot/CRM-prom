@@ -31,6 +31,7 @@ export default async function LeadsPage({
     .from("leads")
     .select("id, first_name, last_name, email, phone, company, status, owner_id, created_at")
     .eq("organization_id", organization.id)
+    .is("archived_at", null)
     .order("created_at", { ascending: false });
 
   if (params.status !== "all") {

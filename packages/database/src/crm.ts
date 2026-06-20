@@ -103,6 +103,12 @@ export const messageInputSchema = z.object({
   status: z.enum(messageStatuses).default("sent")
 });
 
+export const messageUpdateSchema = z.object({
+  id: z.string().uuid(),
+  conversation_id: z.string().uuid(),
+  body: z.string().trim().min(1).max(4000)
+});
+
 export type LeadInput = z.infer<typeof leadInputSchema>;
 export type ContactInput = z.infer<typeof contactInputSchema>;
 export type ConversationInput = z.infer<typeof conversationInputSchema>;

@@ -171,6 +171,11 @@ class FakeQuery {
     return this;
   }
 
+  is(column: string, value: unknown) {
+    this.filters.push((row) => (row[column] ?? null) === value);
+    return this;
+  }
+
   neq(column: string, value: unknown) {
     this.filters.push((row) => row[column] !== value);
     return this;

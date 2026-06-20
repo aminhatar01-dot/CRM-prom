@@ -103,6 +103,7 @@ async function persistInboundMessage(
     .select("id")
     .eq("organization_id", setting.organization_id)
     .eq("phone", message.from)
+    .is("archived_at", null)
     .maybeSingle<{ id: string }>();
 
   const contactId =
@@ -129,6 +130,7 @@ async function persistInboundMessage(
     .eq("organization_id", setting.organization_id)
     .eq("channel", "whatsapp")
     .eq("external_contact_id", message.from)
+    .is("archived_at", null)
     .neq("status", "cerrada")
     .order("updated_at", { ascending: false })
     .limit(1)

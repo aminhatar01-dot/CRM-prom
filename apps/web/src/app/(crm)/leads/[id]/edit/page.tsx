@@ -13,6 +13,7 @@ export default async function EditLeadPage({ params }: { params: Promise<{ id: s
       .select("id, first_name, last_name, email, phone, company, source, status, owner_id, notes")
       .eq("id", id)
       .eq("organization_id", organization.id)
+      .is("archived_at", null)
       .single(),
     getAssignableMembers(supabase, organization.id)
   ]);

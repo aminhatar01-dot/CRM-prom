@@ -22,6 +22,7 @@ export default async function VariablesPage() {
     .from("variables")
     .select("id, name, key, type, description, active, required")
     .eq("organization_id", organization.id)
+    .is("archived_at", null)
     .order("created_at", { ascending: false })
     .returns<VariableRow[]>();
 

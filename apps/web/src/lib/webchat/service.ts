@@ -10,6 +10,7 @@ type WebchatQueryBuilder = {
   insert: (payload: unknown) => WebchatQueryBuilder;
   update: (payload: unknown) => WebchatQueryBuilder;
   eq: (column: string, value: unknown) => WebchatQueryBuilder;
+  is: (column: string, value: unknown) => WebchatQueryBuilder;
   neq: (column: string, value: unknown) => WebchatQueryBuilder;
   or: (filter: string) => WebchatQueryBuilder;
   order: (column: string, options?: unknown) => WebchatQueryBuilder;
@@ -235,6 +236,7 @@ async function upsertWebchatPerson({
         .from("contacts")
         .select("id")
         .eq("organization_id", organizationId)
+        .is("archived_at", null)
         .or(filter)
         .limit(1)
         .maybeSingle<{ id: string }>()
@@ -260,6 +262,7 @@ async function upsertWebchatPerson({
         .from("leads")
         .select("id")
         .eq("organization_id", organizationId)
+        .is("archived_at", null)
         .or(filter)
         .limit(1)
         .maybeSingle<{ id: string }>()
@@ -312,6 +315,7 @@ async function loadWidgetConversation(
     .eq("id", conversationId)
     .eq("organization_id", widget.organization_id)
     .eq("webchat_widget_id", widget.id)
+    .is("archived_at", null)
     .maybeSingle<{ id: string }>();
 
   return data;

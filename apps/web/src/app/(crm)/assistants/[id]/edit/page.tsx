@@ -12,6 +12,7 @@ export default async function EditAssistantPage({ params }: { params: Promise<{ 
     .select("id, name, description, prompt, objective, tone, rules, fallback_message, active, channel_id")
     .eq("id", id)
     .eq("organization_id", organization.id)
+    .is("archived_at", null)
     .single();
 
   if (!assistant) return <section className="p-6">Asistente no encontrado.</section>;

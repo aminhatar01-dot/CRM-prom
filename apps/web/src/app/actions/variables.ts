@@ -2,9 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { VariableExtractor } from "@crm-pro-ai/ai/variable-extractor";
 import { variableSchema, variableUpdateSchema } from "@crm-pro-ai/ai/variables";
 import { requireUser } from "@/lib/auth";
+import { actionErrorCode } from "@/lib/action-errors";
 import { getActiveOrganization } from "@/lib/organization";
 import {
   buildConversationVariableContext,
@@ -49,7 +51,7 @@ export async function createVariable(formData: FormData) {
     .select("id")
     .single<{ id: string }>();
 
-  if (error || !data) redirect("/variables/new?error=create");
+  if (error || !data) redirect(`/variables/new?error=${actionErrorCode(error)}`);
 
   await audit("create_variable", "variables", data.id, organization.id);
   revalidatePath("/variables");
@@ -66,13 +68,17 @@ export async function updateVariable(formData: FormData) {
   const { supabase, user } = await requireUser();
   const organization = await getActiveOrganization(supabase, user);
   const { id, ...payload } = parsed.data;
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("variables")
     .update(payload)
     .eq("id", id)
-    .eq("organization_id", organization.id);
+    .eq("organization_id", organization.id)
+    .is("archived_at", null)
+    .select("id")
+    .maybeSingle<{ id: string }>();
 
-  if (error) redirect(`/variables/${id}/edit?error=update`);
+  if (error) redirect(`/variables/${id}/edit?error=${actionErrorCode(error)}`);
+  if (!updated) redirect(`/variables/${id}/edit?error=not-found`);
 
   await audit("update_variable", "variables", id, organization.id);
   revalidatePath("/variables");
@@ -220,12 +226,37 @@ export async function extractLeadVariables(formData: FormData) {
   redirect(`/leads/${leadId}?variables=${extractedCount}`);
 }
 
+export async function archiveVariable(formData: FormData) {
+  const id = value(formData, "id");
+  const parsed = z.string().uuid().safeParse(id);
+  if (!parsed.success) redirect("/variables?error=invalid");
+
+  const { supabase, user } = await requireUser();
+  const organization = await getActiveOrganization(supabase, user);
+  const { data, error } = await supabase
+    .from("variables")
+    .update({ archived_at: new Date().toISOString(), active: false })
+    .eq("id", id)
+    .eq("organization_id", organization.id)
+    .is("archived_at", null)
+    .select("id")
+    .maybeSingle<{ id: string }>();
+
+  if (error) redirect(`/variables?error=${actionErrorCode(error)}`);
+  if (!data) redirect("/variables?error=not-found");
+
+  await audit("archive_variable", "variables", id, organization.id);
+  revalidatePath("/variables");
+  redirect("/variables?success=archived");
+}
+
 async function loadActiveVariables(supabase: Awaited<ReturnType<typeof requireUser>>["supabase"], organizationId: string) {
   const { data } = await supabase
     .from("variables")
     .select("id, organization_id, name, key, description, type, extraction_prompt, active, required, options")
     .eq("organization_id", organizationId)
     .eq("active", true)
+    .is("archived_at", null)
     .returns<VariableRow[]>();
 
   return (data ?? []).map(mapVariable);

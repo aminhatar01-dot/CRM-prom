@@ -13,6 +13,7 @@ export default async function EditContactPage({ params }: { params: Promise<{ id
       .select("id, first_name, last_name, email, phone, company, location, owner_id, notes")
       .eq("id", id)
       .eq("organization_id", organization.id)
+      .is("archived_at", null)
       .single(),
     getAssignableMembers(supabase, organization.id)
   ]);

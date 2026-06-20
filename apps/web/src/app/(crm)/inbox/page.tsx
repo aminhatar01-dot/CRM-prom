@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bell, Bot, Braces, Search, SendHorizontal, Sparkles, Tags } from "lucide-react";
+import { Archive, Bell, Bot, Braces, Search, SendHorizontal, Sparkles, Tags } from "lucide-react";
 import {
   conversationAiStatuses,
   conversationChannels,
@@ -7,7 +7,13 @@ import {
 } from "@crm-pro-ai/database/crm";
 import { Button } from "@crm-pro-ai/ui/button";
 import { Input } from "@crm-pro-ai/ui/input";
-import { createMessage, updateConversation } from "@/app/actions/crm";
+import {
+  archiveConversation,
+  archiveMessage,
+  createMessage,
+  updateConversation,
+  updateMessage
+} from "@/app/actions/crm";
 import { createManualFollowUp } from "@/app/actions/automations";
 import { suggestConversationReply } from "@/app/actions/ai";
 import { analyzeConversationSmartTags, assignSmartTag } from "@/app/actions/smart-tags";
@@ -90,6 +96,7 @@ export default async function InboxPage({
       "id, channel, status, ai_status, ai_paused, owner_id, last_message_at, created_at, leads(id, first_name, last_name, phone, status), contacts(first_name, last_name, phone), messages(body, created_at)",
     )
     .eq("organization_id", organization.id)
+    .is("archived_at", null)
     .order("last_message_at", { ascending: false, nullsFirst: false })
     .limit(50);
 
@@ -114,6 +121,7 @@ export default async function InboxPage({
         .select("id, body, direction, channel, status, created_at")
         .eq("organization_id", organization.id)
         .eq("conversation_id", selected.id)
+        .is("archived_at", null)
         .order("created_at", { ascending: true })
         .returns<MessageRow[]>()
     : { data: [] };
@@ -122,6 +130,7 @@ export default async function InboxPage({
     .select("id, name")
     .eq("organization_id", organization.id)
     .eq("active", true)
+    .is("archived_at", null)
     .order("created_at", { ascending: false })
     .returns<{ id: string; name: string }[]>();
   const { data: smartTags } = await supabase
@@ -129,6 +138,7 @@ export default async function InboxPage({
     .select("id, name, color")
     .eq("organization_id", organization.id)
     .eq("active", true)
+    .is("archived_at", null)
     .order("name")
     .returns<{ id: string; name: string; color: string }[]>();
   const { data: selectedTags } = selected
@@ -250,6 +260,7 @@ export default async function InboxPage({
                     {conversationPhone(selected) ?? "Sin telefono"} · {selected.status}
                   </p>
                 </div>
+                <div className="flex items-center gap-2">
                 <form action={updateConversation} className="flex items-center gap-2">
                   <input type="hidden" name="id" value={selected.id} />
                   <select name="status" defaultValue={selected.status} className="h-9 rounded-md border bg-background px-2 text-xs">
@@ -266,6 +277,14 @@ export default async function InboxPage({
                   </select>
                   <Button type="submit" size="sm" variant="outline">Guardar</Button>
                 </form>
+                <form action={archiveConversation}>
+                  <input type="hidden" name="id" value={selected.id} />
+                  <input type="hidden" name="return_to" value="/inbox" />
+                  <Button type="submit" size="icon" variant="outline" aria-label="Archivar conversacion">
+                    <Archive className="size-4" />
+                  </Button>
+                </form>
+                </div>
               </header>
               <div className="border-b bg-card px-5 py-3">
                 <form action={suggestConversationReply} className="flex flex-wrap items-center gap-2">
@@ -393,7 +412,30 @@ export default async function InboxPage({
                   >
                     <div className={`max-w-[72%] rounded-lg border px-4 py-3 text-sm ${message.direction === "outbound" ? "bg-primary text-primary-foreground" : "bg-card"}`}>
                       <p>{message.body}</p>
-                      <p className="mt-2 text-[11px] opacity-75">{message.status} · {message.channel}</p>
+                      <div className="mt-2 flex items-center justify-between gap-3">
+                        <p className="text-[11px] opacity-75">{message.status} · {message.channel}</p>
+                        <form action={archiveMessage}>
+                          <input type="hidden" name="id" value={message.id} />
+                          <input type="hidden" name="return_to" value={`/inbox?conversation=${selected.id}`} />
+                          <button type="submit" className="text-[11px] underline opacity-70 hover:opacity-100">
+                            Archivar
+                          </button>
+                        </form>
+                      </div>
+                      <details className="mt-2 text-[11px]">
+                        <summary className="cursor-pointer opacity-70">Editar</summary>
+                        <form action={updateMessage} className="mt-2 flex gap-2">
+                          <input type="hidden" name="id" value={message.id} />
+                          <input type="hidden" name="conversation_id" value={selected.id} />
+                          <input
+                            name="body"
+                            defaultValue={message.body}
+                            className="min-w-0 flex-1 rounded border bg-background px-2 py-1 text-foreground"
+                            required
+                          />
+                          <button type="submit" className="underline">Guardar</button>
+                        </form>
+                      </details>
                     </div>
                   </div>
                 ))}

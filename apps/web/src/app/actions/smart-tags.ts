@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { SmartTagClassifier } from "@crm-pro-ai/ai/smart-tag-classifier";
 import {
   smartTagAssignmentSchema,
@@ -9,6 +10,7 @@ import {
   smartTagUpdateSchema
 } from "@crm-pro-ai/ai/smart-tags";
 import { requireUser } from "@/lib/auth";
+import { actionErrorCode } from "@/lib/action-errors";
 import { getActiveOrganization } from "@/lib/organization";
 import {
   buildSmartTagConversationContext,
@@ -49,7 +51,7 @@ export async function createSmartTag(formData: FormData) {
     .select("id")
     .single<{ id: string }>();
 
-  if (error || !data) redirect("/smart-tags/new?error=create");
+  if (error || !data) redirect(`/smart-tags/new?error=${actionErrorCode(error)}`);
 
   await audit("create_smart_tag", "tags", data.id, organization.id);
   revalidatePath("/smart-tags");
@@ -66,13 +68,17 @@ export async function updateSmartTag(formData: FormData) {
   const { supabase, user } = await requireUser();
   const organization = await getActiveOrganization(supabase, user);
   const { id, ...payload } = parsed.data;
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("tags")
     .update(payload)
     .eq("id", id)
-    .eq("organization_id", organization.id);
+    .eq("organization_id", organization.id)
+    .is("archived_at", null)
+    .select("id")
+    .maybeSingle<{ id: string }>();
 
-  if (error) redirect(`/smart-tags/${id}/edit?error=update`);
+  if (error) redirect(`/smart-tags/${id}/edit?error=${actionErrorCode(error)}`);
+  if (!updated) redirect(`/smart-tags/${id}/edit?error=not-found`);
 
   await audit("update_smart_tag", "tags", id, organization.id);
   revalidatePath("/smart-tags");
@@ -135,6 +141,7 @@ export async function analyzeConversationSmartTags(formData: FormData) {
     .select("id, organization_id, name, color, description, classification_prompt, active, auto_pause_assistant, notify_team")
     .eq("organization_id", organization.id)
     .eq("active", true)
+    .is("archived_at", null)
     .returns<TagRow[]>();
 
   const tags = (tagRows ?? []).map(mapSmartTag);
@@ -212,6 +219,30 @@ export async function analyzeConversationSmartTags(formData: FormData) {
 
   revalidatePath("/inbox");
   redirect(`/inbox?conversation=${conversationId}&tags=${matchedCount}&paused=${paused ? "1" : "0"}`);
+}
+
+export async function archiveSmartTag(formData: FormData) {
+  const id = value(formData, "id");
+  const parsed = z.string().uuid().safeParse(id);
+  if (!parsed.success) redirect("/smart-tags?error=invalid");
+
+  const { supabase, user } = await requireUser();
+  const organization = await getActiveOrganization(supabase, user);
+  const { data, error } = await supabase
+    .from("tags")
+    .update({ archived_at: new Date().toISOString(), active: false })
+    .eq("id", id)
+    .eq("organization_id", organization.id)
+    .is("archived_at", null)
+    .select("id")
+    .maybeSingle<{ id: string }>();
+
+  if (error) redirect(`/smart-tags?error=${actionErrorCode(error)}`);
+  if (!data) redirect("/smart-tags?error=not-found");
+
+  await audit("archive_smart_tag", "tags", id, organization.id);
+  revalidatePath("/smart-tags");
+  redirect("/smart-tags?success=archived");
 }
 
 async function audit(

@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { Pencil, Play } from "lucide-react";
+import { Archive, Pencil, Play } from "lucide-react";
 import { Button } from "@crm-pro-ai/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@crm-pro-ai/ui/card";
 import { Input } from "@crm-pro-ai/ui/input";
 import { Label } from "@crm-pro-ai/ui/label";
-import { runAssistantTest } from "@/app/actions/ai";
+import { archiveAssistant, runAssistantTest } from "@/app/actions/ai";
 import { requireUser } from "@/lib/auth";
 import { getActiveOrganization } from "@/lib/organization";
 
@@ -54,6 +54,7 @@ export default async function AssistantDetailPage({
       .select("id, name, description, prompt, objective, tone, rules, fallback_message, active, channel_id")
       .eq("id", id)
       .eq("organization_id", organization.id)
+      .is("archived_at", null)
       .single<AssistantDetail>(),
     supabase
       .from("ai_assistant_tests")
@@ -67,6 +68,7 @@ export default async function AssistantDetailPage({
       .from("conversations")
       .select("id, channel, status, contacts(first_name, last_name), leads(first_name, last_name)")
       .eq("organization_id", organization.id)
+      .is("archived_at", null)
       .order("updated_at", { ascending: false })
       .limit(20)
       .returns<ConversationOption[]>()
@@ -81,12 +83,21 @@ export default async function AssistantDetailPage({
           <h1 className="text-2xl font-semibold tracking-normal">{assistant.name}</h1>
           <p className="text-sm text-muted-foreground">{assistant.description ?? "Sin descripcion"}</p>
         </div>
-        <Button asChild variant="outline">
-          <Link href={`/assistants/${assistant.id}/edit`}>
-            <Pencil className="size-4" />
-            Editar
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link href={`/assistants/${assistant.id}/edit`}>
+              <Pencil className="size-4" />
+              Editar
+            </Link>
+          </Button>
+          <form action={archiveAssistant}>
+            <input type="hidden" name="id" value={assistant.id} />
+            <Button type="submit" variant="outline">
+              <Archive className="size-4" />
+              Archivar
+            </Button>
+          </form>
+        </div>
       </div>
       <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
         <Card>
