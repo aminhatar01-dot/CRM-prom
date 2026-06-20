@@ -350,3 +350,15 @@ Configura hojas publicas o `demo://`:
 ### `integration_secrets`
 
 Guarda referencias a credenciales, no secretos reales.
+
+## Onboarding atomico
+
+La funcion `public.create_initial_organization(name, slug)` crea la organizacion y la membresia `owner` en una sola transaccion usando `auth.uid()`.
+
+Esto evita intentar leer la organizacion antes de que exista la membresia, operacion bloqueada correctamente por RLS. La funcion:
+
+- exige usuario autenticado
+- valida nombre y slug
+- rechaza una segunda organizacion inicial para el mismo usuario
+- revierte ambas inserciones ante cualquier error
+- expone ejecucion solamente al rol `authenticated`

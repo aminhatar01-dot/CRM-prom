@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { Building2 } from "lucide-react";
 import { Button } from "@crm-pro-ai/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@crm-pro-ai/ui/card";
@@ -9,16 +10,27 @@ import { createOrganization } from "./actions";
 export default async function OnboardingPage({
   searchParams
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; slug?: string; suggestion?: string }>;
 }) {
-  await requireUser();
+  const { supabase, user } = await requireUser();
   const params = await searchParams;
+  const { data: memberships } = await supabase
+    .from("organization_members")
+    .select("organization_id")
+    .eq("user_id", user.id)
+    .limit(1);
+
+  if (memberships?.length) {
+    redirect("/dashboard");
+  }
+
+  const errorMessage = onboardingErrorMessage(params.error, params.slug, params.suggestion);
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4 py-10">
       <Card className="w-full max-w-lg">
         <CardHeader>
-          <CardTitle>Crear organización</CardTitle>
+          <CardTitle>Crear organizacion</CardTitle>
         </CardHeader>
         <CardContent>
           <form action={createOrganization} className="space-y-4">
@@ -27,12 +39,18 @@ export default async function OnboardingPage({
               <Input id="name" name="name" placeholder="Equipo Comercial" required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="slug">Slug</Label>
-              <Input id="slug" name="slug" placeholder="equipo-comercial" required />
+              <Label htmlFor="slug">Slug opcional</Label>
+              <Input
+                id="slug"
+                name="slug"
+                defaultValue={params.suggestion ?? params.slug ?? ""}
+                placeholder="equipo-comercial"
+                pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+              />
             </div>
-            {params.error ? (
+            {errorMessage ? (
               <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">
-                No pudimos crear la organización. Usá un slug válido y único.
+                {errorMessage}
               </p>
             ) : null}
             <Button type="submit" className="w-full">
@@ -44,4 +62,17 @@ export default async function OnboardingPage({
       </Card>
     </main>
   );
+}
+
+function onboardingErrorMessage(error?: string, slug?: string, suggestion?: string) {
+  if (!error) return null;
+  if (error === "invalid-slug") {
+    return "El slug solo puede contener letras minusculas, numeros y guiones.";
+  }
+  if (error === "slug-taken") {
+    return suggestion
+      ? `El slug "${slug}" ya existe. Prueba con "${suggestion}".`
+      : "Ese slug ya existe. Prueba con otro.";
+  }
+  return "No pudimos crear la organizacion. Intenta nuevamente.";
 }
