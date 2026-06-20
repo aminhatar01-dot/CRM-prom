@@ -62,11 +62,12 @@ npm run db:push
 ## 4. Preparar Vercel
 
 1. Importar el repositorio GitHub.
-2. Seleccionar Next.js y Root Directory `apps/web`.
-3. Activar `Include source files outside of the Root Directory`.
-4. Mantener el build command `npm run build`.
-5. Cargar las variables para Preview y Production.
-6. Desplegar y guardar la URL generada.
+2. Seleccionar Next.js y Root Directory en la raiz (`.`).
+3. Install Command: `npm install`.
+4. Build Command: `npm run build --workspace @crm-pro-ai/web`.
+5. Output Directory: `apps/web/.next`.
+6. Cargar las variables para Preview y Production.
+7. Desplegar y guardar la URL generada.
 
 ## 5. Variables
 

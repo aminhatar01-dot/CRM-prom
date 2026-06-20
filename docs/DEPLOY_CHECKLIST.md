@@ -12,8 +12,9 @@
 
 - [ ] Supabase esta vinculado al proyecto correcto.
 - [ ] `npm run db:push` finaliza correctamente.
-- [ ] Vercel usa Root Directory `apps/web`.
-- [ ] Vercel incluye archivos externos al Root Directory.
+- [ ] Vercel usa Root Directory en la raiz (`.`).
+- [ ] Build Command usa `npm run build --workspace @crm-pro-ai/web`.
+- [ ] Output Directory usa `apps/web/.next`.
 - [ ] Variables cargadas para Preview y Production.
 - [ ] No se ejecutaron seeds locales en produccion.
 

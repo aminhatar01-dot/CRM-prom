@@ -52,12 +52,14 @@ En el dashboard revisar:
 ## Vercel
 
 1. Importar `CRM-prom` desde GitHub.
-2. Root Directory: `apps/web`.
-3. Activar inclusion de archivos fuera del Root Directory.
-4. Agregar variables desde `.env.example`, con valores reales.
-5. No crear variables publicas para service role, OpenAI, cron o WhatsApp.
-6. Desplegar y actualizar `NEXT_PUBLIC_APP_URL` con el dominio HTTPS final.
-7. Agregar el dominio final a Supabase Auth Redirect URLs.
+2. Root Directory: raiz del repositorio (`.`).
+3. Install Command: `npm install`.
+4. Build Command: `npm run build --workspace @crm-pro-ai/web`.
+5. Output Directory: `apps/web/.next`.
+6. Agregar variables desde `.env.example`, con valores reales.
+7. No crear variables publicas para service role, OpenAI, cron o WhatsApp.
+8. Desplegar y actualizar `NEXT_PUBLIC_APP_URL` con el dominio HTTPS final.
+9. Agregar el dominio final a Supabase Auth Redirect URLs.
 
 ## Meta y WhatsApp
 
@@ -83,7 +85,7 @@ npm run deploy:check
 ```
 
 - HTTP 503 en `/api/health`: revisar variables obligatorias.
-- Build falla en Vercel: confirmar Root Directory e inclusion de paquetes externos.
+- Vercel no detecta Next.js: confirmar Root Directory raiz, `vercel.json` y dependencias de `apps/web/package.json`.
 - Supabase rechaza requests: revisar URL, anon key, RLS y dominio de Auth.
 - WhatsApp no verifica: comparar callback y verify token.
 - WebChat bloqueado: agregar el dominio exacto en la configuracion del widget.

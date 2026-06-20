@@ -43,13 +43,15 @@ configurarse en Vercel y Supabase.
 En Vercel Free:
 
 - Framework: Next.js.
-- Root Directory: `apps/web`.
-- Build Command: `cd ../.. && npm install && npm run build --workspace @crm-pro-ai/web`.
+- Root Directory: raiz del repositorio (`.`).
+- Install Command: `npm install`.
+- Build Command: `npm run build --workspace @crm-pro-ai/web`.
 - Output Directory: `apps/web/.next`.
+- Configuracion versionada en `vercel.json`.
 
 Configurar:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `NEXT_PUBLIC_SITE_URL`
+- `NEXT_PUBLIC_APP_URL`
 - `OPENAI_API_KEY`

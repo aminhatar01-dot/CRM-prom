@@ -194,6 +194,31 @@ export function checkHealthRoute(root) {
   ];
 }
 
+export function checkVercelConfig(root) {
+  const configPath = resolve(root, "vercel.json");
+  const webPackagePath = resolve(root, "apps/web/package.json");
+  if (!existsSync(configPath) || !existsSync(webPackagePath)) {
+    return [result("Vercel monorepo configuration", "fail", "vercel.json or apps/web/package.json is missing")];
+  }
+
+  const config = JSON.parse(readFileSync(configPath, "utf8"));
+  const webPackage = JSON.parse(readFileSync(webPackagePath, "utf8"));
+  const valid =
+    config.framework === "nextjs" &&
+    config.installCommand === "npm install" &&
+    config.buildCommand === "npm run build --workspace @crm-pro-ai/web" &&
+    config.outputDirectory === "apps/web/.next" &&
+    Boolean(webPackage.dependencies?.next);
+
+  return [
+    result(
+      "Vercel monorepo configuration",
+      valid ? "pass" : "fail",
+      valid ? "Root build and Next.js workspace detection configured" : "Vercel settings do not match the monorepo contract"
+    )
+  ];
+}
+
 export function getTrackedFiles(root) {
   const git = spawnSync(
     "git",
@@ -330,6 +355,7 @@ export async function runChecks({ root, scope = "all", strict = false, build = f
       ...checkRequiredDocs(root),
       ...checkPackageScripts(root),
       ...checkHealthRoute(root),
+      ...checkVercelConfig(root),
       ...checkEnvLocalIgnored(root),
       ...checkHardcodedSecrets(root),
       ...checkServiceRoleFrontend(root)

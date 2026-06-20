@@ -31,11 +31,27 @@ El seed remoto es idempotente, no crea usuarios ni membresias y mantiene WhatsAp
 ## 2. Vercel
 
 1. Importar el repositorio GitHub en Vercel.
-2. Framework: Next.js.
-3. Root directory: `apps/web`.
-4. Activar `Include source files outside of the Root Directory` para que Vercel incluya los paquetes del monorepo.
-5. Build command: `npm run build`.
-6. Output: Next.js default.
+2. Configurar **Root Directory** en la raiz del repositorio (`.`). No seleccionar `apps/web`.
+3. Framework Preset: `Next.js`.
+4. Install Command: `npm install`.
+5. Build Command: `npm run build --workspace @crm-pro-ai/web`.
+6. Output Directory: `apps/web/.next`.
+7. Mantener habilitado el uso de `vercel.json`; la configuracion raiz contiene esos mismos valores.
+
+Configuracion versionada:
+
+```json
+{
+  "framework": "nextjs",
+  "installCommand": "npm install",
+  "buildCommand": "npm run build --workspace @crm-pro-ai/web",
+  "outputDirectory": "apps/web/.next"
+}
+```
+
+El workspace `apps/web/package.json` declara directamente `next`, `react` y `react-dom`. Esto permite que Vercel detecte Next.js sin depender de que npm haya elevado las dependencias del paquete raiz.
+
+Si el proyecto Vercel tenia Root Directory `apps/web`, cambiarlo a la raiz antes de redeploy. Despues usar **Redeploy** sin reutilizar Build Cache si persiste un resultado anterior de autodeteccion.
 
 ## 3. Variables de entorno
 
