@@ -10,17 +10,17 @@ describe("Vercel monorepo contract", () => {
       framework: string;
       installCommand: string;
       buildCommand: string;
-      outputDirectory: string;
+      outputDirectory?: string;
     };
 
     expect(config).toEqual(
       expect.objectContaining({
         framework: "nextjs",
         installCommand: "npm install",
-        buildCommand: "npm run build --workspace @crm-pro-ai/web",
-        outputDirectory: "apps/web/.next"
+        buildCommand: "npm run build --workspace @crm-pro-ai/web"
       })
     );
+    expect(config).not.toHaveProperty("outputDirectory");
   });
 
   it("declares the Next.js runtime in the web workspace", () => {

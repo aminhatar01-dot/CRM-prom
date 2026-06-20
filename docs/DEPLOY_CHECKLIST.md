@@ -14,7 +14,7 @@
 - [ ] `npm run db:push` finaliza correctamente.
 - [ ] Vercel usa Root Directory en la raiz (`.`).
 - [ ] Build Command usa `npm run build --workspace @crm-pro-ai/web`.
-- [ ] Output Directory usa `apps/web/.next`.
+- [ ] Output Directory esta vacio y usa la deteccion automatica de Next.js.
 - [ ] Variables cargadas para Preview y Production.
 - [ ] No se ejecutaron seeds locales en produccion.
 

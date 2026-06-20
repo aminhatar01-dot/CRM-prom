@@ -46,7 +46,7 @@ En Vercel Free:
 - Root Directory: raiz del repositorio (`.`).
 - Install Command: `npm install`.
 - Build Command: `npm run build --workspace @crm-pro-ai/web`.
-- Output Directory: `apps/web/.next`.
+- Output Directory: vacio; Vercel usa el default de Next.js.
 - Configuracion versionada en `vercel.json`.
 
 Configurar:

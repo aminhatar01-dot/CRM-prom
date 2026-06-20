@@ -207,14 +207,14 @@ export function checkVercelConfig(root) {
     config.framework === "nextjs" &&
     config.installCommand === "npm install" &&
     config.buildCommand === "npm run build --workspace @crm-pro-ai/web" &&
-    config.outputDirectory === "apps/web/.next" &&
+    !Object.hasOwn(config, "outputDirectory") &&
     Boolean(webPackage.dependencies?.next);
 
   return [
     result(
       "Vercel monorepo configuration",
       valid ? "pass" : "fail",
-      valid ? "Root build and Next.js workspace detection configured" : "Vercel settings do not match the monorepo contract"
+      valid ? "Root build configured with automatic Next.js output detection" : "Vercel settings do not match the monorepo contract"
     )
   ];
 }

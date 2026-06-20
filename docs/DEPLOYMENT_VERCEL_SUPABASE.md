@@ -35,7 +35,7 @@ El seed remoto es idempotente, no crea usuarios ni membresias y mantiene WhatsAp
 3. Framework Preset: `Next.js`.
 4. Install Command: `npm install`.
 5. Build Command: `npm run build --workspace @crm-pro-ai/web`.
-6. Output Directory: `apps/web/.next`.
+6. Output Directory: dejar vacio para usar la deteccion automatica de Next.js.
 7. Mantener habilitado el uso de `vercel.json`; la configuracion raiz contiene esos mismos valores.
 
 Configuracion versionada:
@@ -44,14 +44,15 @@ Configuracion versionada:
 {
   "framework": "nextjs",
   "installCommand": "npm install",
-  "buildCommand": "npm run build --workspace @crm-pro-ai/web",
-  "outputDirectory": "apps/web/.next"
+  "buildCommand": "npm run build --workspace @crm-pro-ai/web"
 }
 ```
 
 El workspace `apps/web/package.json` declara directamente `next`, `react` y `react-dom`. Esto permite que Vercel detecte Next.js sin depender de que npm haya elevado las dependencias del paquete raiz.
 
-Si el proyecto Vercel tenia Root Directory `apps/web`, cambiarlo a la raiz antes de redeploy. Despues usar **Redeploy** sin reutilizar Build Cache si persiste un resultado anterior de autodeteccion.
+No configurar manualmente `apps/web/.next` como Output Directory: Vercel ya ejecuta el build dentro del workspace y duplicaria la ruta como `apps/web/apps/web/.next`.
+
+Si el proyecto Vercel tenia Root Directory `apps/web` o un Output Directory personalizado, cambiar Root Directory a la raiz, limpiar Output Directory y hacer **Redeploy** sin reutilizar Build Cache.
 
 ## 3. Variables de entorno
 

@@ -65,7 +65,7 @@ npm run db:push
 2. Seleccionar Next.js y Root Directory en la raiz (`.`).
 3. Install Command: `npm install`.
 4. Build Command: `npm run build --workspace @crm-pro-ai/web`.
-5. Output Directory: `apps/web/.next`.
+5. Output Directory: dejar vacio para usar el default de Next.js.
 6. Cargar las variables para Preview y Production.
 7. Desplegar y guardar la URL generada.
 

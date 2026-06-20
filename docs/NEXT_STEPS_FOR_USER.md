@@ -55,7 +55,7 @@ En el dashboard revisar:
 2. Root Directory: raiz del repositorio (`.`).
 3. Install Command: `npm install`.
 4. Build Command: `npm run build --workspace @crm-pro-ai/web`.
-5. Output Directory: `apps/web/.next`.
+5. Output Directory: dejar vacio.
 6. Agregar variables desde `.env.example`, con valores reales.
 7. No crear variables publicas para service role, OpenAI, cron o WhatsApp.
 8. Desplegar y actualizar `NEXT_PUBLIC_APP_URL` con el dominio HTTPS final.
