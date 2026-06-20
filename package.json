@@ -18,6 +18,7 @@
     "qa:e2e": "vitest run apps/web/tests/qa/mvp-full-flow.test.ts && playwright test --config apps/web/playwright.config.ts",
     "db:push": "npx supabase db push",
     "db:seed": "npx supabase db reset --local",
+    "db:seed:remote": "npx supabase db push --linked --include-seed --yes",
     "format": "prettier . --write",
     "typecheck": "tsc --build --pretty"
   },

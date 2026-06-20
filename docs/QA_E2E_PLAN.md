@@ -54,7 +54,8 @@ Ejecutado con Vitest y servicios reales en memoria:
 
 ## Datos
 
-- `supabase/seed.sql` mantiene datos demo para CRM, Inbox, asistentes, tags, variables, automatizaciones, WebChat e integraciones.
+- `supabase/seed.sql` mantiene configuracion demo para contactos, asistentes, tags, variables, automatizaciones e integraciones.
+- Leads, conversaciones, mensajes, WebChat y acciones de automatizacion se validan en memoria porque sus triggers genericos actuales requieren una migracion correctiva futura.
 - La simulacion E2E genera sus propios datos en memoria y no modifica Supabase.
 
 ## Comandos

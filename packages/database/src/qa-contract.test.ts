@@ -16,18 +16,14 @@ describe("FASE 12 QA contracts", () => {
     expect(existsSync(resolve(root, "docs/PHASE_12_VALIDATION.md"))).toBe(true);
   });
 
-  it("keeps demo data for every integral QA module", () => {
+  it("keeps safe remote demo reference data", () => {
     const seed = readFileSync(resolve(root, "supabase/seed.sql"), "utf8");
     const requiredTables = [
-      "leads",
       "contacts",
-      "conversations",
-      "messages",
       "ai_assistants",
       "tags",
       "variables",
       "automation_rules",
-      "webchat_widgets",
       "integrations",
       "integration_tools"
     ];
@@ -35,6 +31,12 @@ describe("FASE 12 QA contracts", () => {
     for (const table of requiredTables) {
       expect(seed).toContain(`public.${table}`);
     }
+
+    expect(seed).not.toMatch(/insert\s+into\s+public\.leads\b/i);
+    expect(seed).not.toMatch(/insert\s+into\s+public\.conversations\b/i);
+    expect(seed).not.toMatch(/insert\s+into\s+public\.messages\b/i);
+    expect(seed).not.toMatch(/insert\s+into\s+public\.automation_actions\b/i);
+    expect(seed).not.toMatch(/insert\s+into\s+public\.webchat_widgets\b/i);
   });
 
   it("keeps RLS documented and covered by its migration contract", () => {

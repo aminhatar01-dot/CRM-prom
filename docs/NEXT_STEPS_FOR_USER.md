@@ -34,6 +34,14 @@ npm run db:push
 
 No pegar SQL de seeds demo en produccion salvo decision deliberada. `npm run db:seed` reinicia Supabase local.
 
+Para cargar solo datos demo seguros en el remoto vinculado:
+
+```powershell
+npm run db:seed:remote
+```
+
+Este comando no resetea la base. No crea usuarios ni secretos y puede ejecutarse nuevamente de forma idempotente.
+
 En el dashboard revisar:
 
 1. Authentication > URL Configuration.

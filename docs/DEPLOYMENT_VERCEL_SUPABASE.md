@@ -20,6 +20,14 @@ npm run db:seed
 
 `db:seed` usa `supabase db reset --local`; no ejecutarlo contra produccion.
 
+Para insertar el conjunto demo minimo en el proyecto remoto vinculado, sin reset:
+
+```bash
+npm run db:seed:remote
+```
+
+El seed remoto es idempotente, no crea usuarios ni membresias y mantiene WhatsApp, IA automatica y automatizaciones desactivadas. Siembra configuracion y datos de referencia, pero no inserta `leads`, `conversations`, `messages`, `lead_tags`, `automation_actions` ni `webchat_widgets` porque los triggers genericos actuales de esas tablas requieren una migracion correctiva separada.
+
 ## 2. Vercel
 
 1. Importar el repositorio GitHub en Vercel.

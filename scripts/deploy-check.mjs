@@ -169,7 +169,8 @@ export function checkPackageScripts(root) {
     "qa:e2e",
     "validate",
     "db:push",
-    "db:seed"
+    "db:seed",
+    "db:seed:remote"
   ];
   const missing = expected.filter((name) => !packageJson.scripts?.[name]);
   return [
