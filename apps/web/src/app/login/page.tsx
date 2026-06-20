@@ -1,9 +1,9 @@
-import { Mail } from "lucide-react";
+import { KeyRound, Mail } from "lucide-react";
 import { Button } from "@crm-pro-ai/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@crm-pro-ai/ui/card";
 import { Input } from "@crm-pro-ai/ui/input";
 import { Label } from "@crm-pro-ai/ui/label";
-import { signInWithEmail } from "./actions";
+import { signInWithEmail, signInWithPassword } from "./actions";
 
 export default async function LoginPage({
   searchParams
@@ -19,23 +19,63 @@ export default async function LoginPage({
         <CardHeader>
           <CardTitle>Entrar a CRM PRO AI</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
+          {errorMessage ? (
+            <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">
+              {errorMessage}
+            </p>
+          ) : null}
+
+          <form action={signInWithPassword} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="password-email">Email</Label>
+              <Input
+                id="password-email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Contrasena</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full">
+              <KeyRound className="size-4" />
+              Entrar con contrasena
+            </Button>
+          </form>
+
+          <div className="flex items-center gap-3" aria-hidden="true">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-xs text-muted-foreground">o usa un enlace</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+
           <form action={signInWithEmail} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" type="email" autoComplete="email" required />
+              <Label htmlFor="magic-link-email">Email</Label>
+              <Input
+                id="magic-link-email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+              />
             </div>
             {params.sent ? (
               <p className="rounded-md bg-emerald-50 p-3 text-sm text-emerald-700">
                 Te enviamos un enlace de acceso.
               </p>
             ) : null}
-            {errorMessage ? (
-              <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">
-                {errorMessage}
-              </p>
-            ) : null}
-            <Button type="submit" className="w-full">
+            <Button type="submit" variant="outline" className="w-full">
               <Mail className="size-4" />
               Enviar magic link
             </Button>
@@ -49,13 +89,18 @@ export default async function LoginPage({
 function loginErrorMessage(error?: string) {
   if (!error) return null;
   if (error === "invalid-email") return "Ingresa un email valido.";
-  if (error === "rate-limit") return "Espera un minuto antes de solicitar otro enlace.";
+  if (error === "invalid-credentials") return "Email o contrasena incorrectos.";
+  if (error === "email-not-confirmed") return "Confirma tu email antes de ingresar.";
+  if (error === "rate-limit") return "Espera un minuto antes de intentarlo nuevamente.";
   if (error === "missing-code") return "El enlace esta incompleto. Solicita uno nuevo.";
   if (error === "callback" || error === "session") {
     return "El enlace vencio o ya fue utilizado. Solicita uno nuevo desde este navegador.";
   }
   if (error === "membership") {
     return "La sesion se creo, pero no pudimos consultar tu organizacion. Intenta nuevamente.";
+  }
+  if (error === "password-auth") {
+    return "No pudimos iniciar sesion con contrasena. Intenta nuevamente.";
   }
   return "No pudimos iniciar sesion. Revisa el email e intenta de nuevo.";
 }

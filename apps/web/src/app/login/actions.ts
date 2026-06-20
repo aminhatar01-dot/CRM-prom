@@ -3,12 +3,51 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { getRequestOrigin } from "@/lib/auth-flow";
+import { getRequestOrigin, passwordSignInErrorCode, postAuthPath } from "@/lib/auth-flow";
 import { createClient } from "@/lib/supabase/server";
 
 const loginSchema = z.object({
   email: z.string().email()
 });
+
+const passwordLoginSchema = loginSchema.extend({
+  password: z.string().min(1).max(128)
+});
+
+export async function signInWithPassword(formData: FormData) {
+  const parsed = passwordLoginSchema.safeParse({
+    email: formData.get("email"),
+    password: formData.get("password")
+  });
+
+  if (!parsed.success) {
+    redirect("/login?error=invalid-credentials");
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
+
+  if (error || !data.user) {
+    redirect(
+      `/login?error=${passwordSignInErrorCode(
+        error?.message ?? "Invalid login credentials",
+        error?.status
+      )}`
+    );
+  }
+
+  const { data: memberships, error: membershipError } = await supabase
+    .from("organization_members")
+    .select("organization_id")
+    .eq("user_id", data.user.id)
+    .limit(1);
+
+  if (membershipError) {
+    redirect("/login?error=membership");
+  }
+
+  redirect(postAuthPath(Boolean(memberships?.length)));
+}
 
 export async function signInWithEmail(formData: FormData) {
   const parsed = loginSchema.safeParse({

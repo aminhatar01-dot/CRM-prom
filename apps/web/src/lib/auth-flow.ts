@@ -33,6 +33,14 @@ export function postAuthPath(hasOrganization: boolean) {
   return hasOrganization ? "/dashboard" : "/onboarding";
 }
 
+export function passwordSignInErrorCode(message: string, status?: number) {
+  const normalized = message.toLowerCase();
+  if (status === 429) return "rate-limit";
+  if (normalized.includes("invalid login credentials")) return "invalid-credentials";
+  if (normalized.includes("email not confirmed")) return "email-not-confirmed";
+  return "password-auth";
+}
+
 function firstHeaderValue(value: string | null) {
   return value?.split(",")[0]?.trim() || null;
 }

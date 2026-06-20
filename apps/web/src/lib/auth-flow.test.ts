@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { getRequestOrigin, isSupportedOtpType, postAuthPath } from "./auth-flow";
+import {
+  getRequestOrigin,
+  isSupportedOtpType,
+  passwordSignInErrorCode,
+  postAuthPath
+} from "./auth-flow";
 
 function headers(values: Record<string, string>) {
   return {
@@ -39,5 +44,15 @@ describe("Supabase auth flow", () => {
   it("routes users according to organization membership", () => {
     expect(postAuthPath(false)).toBe("/onboarding");
     expect(postAuthPath(true)).toBe("/dashboard");
+  });
+
+  it("maps password authentication failures to safe UI errors", () => {
+    expect(passwordSignInErrorCode("Invalid login credentials", 400)).toBe(
+      "invalid-credentials"
+    );
+    expect(passwordSignInErrorCode("Email not confirmed", 400)).toBe(
+      "email-not-confirmed"
+    );
+    expect(passwordSignInErrorCode("Too many requests", 429)).toBe("rate-limit");
   });
 });

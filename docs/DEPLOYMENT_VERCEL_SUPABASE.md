@@ -91,6 +91,8 @@ En Supabase Authentication > URL Configuration:
 - Redirect URL: `https://crm-prom.vercel.app/auth/callback`
 - Mantener `http://localhost:3000/auth/callback` para desarrollo local.
 
+Authentication > Providers > Email debe permanecer habilitado. El login con contrasena usa `signInWithPassword`; magic link sigue disponible como alternativa.
+
 ## 4. WhatsApp webhooks
 
 Configurar en Meta:

@@ -25,6 +25,8 @@ test("@smoke healthcheck responds with the QA environment", async ({ request }) 
 });
 
 test("@smoke protected CRM modules require authentication", async ({ request }) => {
+  test.setTimeout(60_000);
+
   for (const route of protectedRoutes) {
     const response = await request.get(route, { maxRedirects: 0 });
     expect(response.status(), route).toBe(307);

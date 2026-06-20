@@ -16,6 +16,23 @@ describe("production auth contract", () => {
     expect(action).not.toContain("NEXT_PUBLIC_SITE_URL");
   });
 
+  it("supports password login and membership-aware redirects", () => {
+    const action = readFileSync(
+      resolve(root, "apps/web/src/app/login/actions.ts"),
+      "utf8"
+    );
+    const page = readFileSync(
+      resolve(root, "apps/web/src/app/login/page.tsx"),
+      "utf8"
+    );
+
+    expect(action).toContain("signInWithPassword");
+    expect(action).toContain("organization_members");
+    expect(action).toContain("postAuthPath");
+    expect(page).toContain("Entrar con contrasena");
+    expect(page).toContain("Enviar magic link");
+  });
+
   it("checks callback errors before choosing onboarding or dashboard", () => {
     const callback = readFileSync(
       resolve(root, "apps/web/src/app/auth/callback/route.ts"),

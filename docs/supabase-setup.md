@@ -37,6 +37,19 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-o-publishable-key>
 
 El magic link debe abrirse en el mismo navegador donde se solicito para conservar el verificador PKCE. Si el enlace expiro o ya fue usado, solicitar uno nuevo y esperar al menos 60 segundos antes de repetir.
 
+## Login con contrasena
+
+La pantalla `/login` tambien usa `supabase.auth.signInWithPassword`.
+
+En Supabase Dashboard:
+
+1. Abrir Authentication > Providers > Email.
+2. Mantener Email habilitado.
+3. Crear un usuario de prueba desde Authentication > Users con email y contrasena, o asignar una contrasena mediante un flujo de recuperacion.
+4. Confirmar el email si el proyecto exige confirmacion.
+
+Los usuarios creados solamente mediante magic link no reciben una contrasena automaticamente.
+
 ## RLS
 
 Todas las tablas operativas tienen RLS activado. El patrón usado es:
