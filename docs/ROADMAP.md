@@ -75,9 +75,14 @@
 - Deploy Vercel/Supabase.
 - Checklist produccion.
 
-## Siguiente
-
 ### FASE 11
+
+- Deploy Assistant guiado.
+- Checks locales de entorno, migraciones y seguridad.
+- Checklist interactivo y rollback.
+- Pasos manuales para Supabase, Vercel, Meta y dominios.
+
+## Siguiente
 
 - WebChat avanzado.
 - Ejecucion controlada de tools por IA.

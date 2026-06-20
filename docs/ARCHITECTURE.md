@@ -129,3 +129,15 @@ Hardening de produccion agrega:
 - contrato automatizado de RLS en tests
 
 El objetivo de esta fase es preparar el MVP para Vercel/Supabase sin activar envios automaticos reales ni ejecucion autonoma de tools.
+
+## FASE 11
+
+Deploy Assistant agrega:
+
+- `scripts/deploy-check.mjs` con checks locales sin almacenar secretos
+- scopes `env`, `db` y `app` para diagnosticos independientes
+- modo `DEPLOY_STRICT=true` para gates de produccion
+- build y health route dentro de `app:check`
+- contratos para docs, Git ignore y aislamiento de service role
+
+Las acciones sobre Vercel, Supabase, Meta, dominios y billing permanecen manuales y documentadas.

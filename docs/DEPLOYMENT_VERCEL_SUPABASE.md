@@ -1,5 +1,7 @@
 # Deploy Vercel + Supabase
 
+Para el flujo guiado completo, usar [DEPLOY_ASSISTANT.md](DEPLOY_ASSISTANT.md) y [DEPLOY_CHECKLIST.md](DEPLOY_CHECKLIST.md).
+
 ## 1. Supabase
 
 1. Crear o abrir el proyecto Supabase.
@@ -85,6 +87,7 @@ Authorization: Bearer <CRON_SECRET>
 
 ```bash
 npm run validate
+npm run deploy:check
 ```
 
 Luego revisar:
