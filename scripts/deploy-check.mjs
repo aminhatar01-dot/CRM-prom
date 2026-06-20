@@ -17,7 +17,9 @@ export const requiredDocs = [
   "docs/DEPLOY_ASSISTANT.md",
   "docs/DEPLOY_CHECKLIST.md",
   "docs/NEXT_STEPS_FOR_USER.md",
-  "docs/PHASE_11_VALIDATION.md"
+  "docs/PHASE_11_VALIDATION.md",
+  "docs/QA_E2E_PLAN.md",
+  "docs/PHASE_12_VALIDATION.md"
 ];
 
 const secretPatterns = [
@@ -163,6 +165,8 @@ export function checkPackageScripts(root) {
     "env:check",
     "db:check",
     "app:check",
+    "qa:smoke",
+    "qa:e2e",
     "validate",
     "db:push",
     "db:seed"

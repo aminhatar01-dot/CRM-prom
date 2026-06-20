@@ -14,6 +14,8 @@
     "env:check": "node scripts/deploy-check.mjs env",
     "db:check": "node scripts/deploy-check.mjs db",
     "app:check": "node scripts/deploy-check.mjs app --build",
+    "qa:smoke": "playwright test --config apps/web/playwright.config.ts --grep @smoke",
+    "qa:e2e": "vitest run apps/web/tests/qa/mvp-full-flow.test.ts && playwright test --config apps/web/playwright.config.ts",
     "db:push": "npx supabase db push",
     "db:seed": "npx supabase db reset --local",
     "format": "prettier . --write",
