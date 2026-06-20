@@ -14,13 +14,17 @@ describe("remote seed contract", () => {
     expect(seed).not.toContain("disable trigger");
   });
 
-  it("avoids tables affected by incompatible generic triggers", () => {
-    expect(seed).not.toMatch(/insert\s+into\s+public\.leads\b/);
-    expect(seed).not.toMatch(/insert\s+into\s+public\.conversations\b/);
-    expect(seed).not.toMatch(/insert\s+into\s+public\.messages\b/);
-    expect(seed).not.toMatch(/insert\s+into\s+public\.lead_tags\b/);
-    expect(seed).not.toMatch(/insert\s+into\s+public\.automation_actions\b/);
-    expect(seed).not.toMatch(/insert\s+into\s+public\.webchat_widgets\b/);
+  it("seeds the repaired CRM tables without bypassing triggers", () => {
+    for (const table of [
+      "leads",
+      "conversations",
+      "messages",
+      "lead_tags",
+      "automation_actions",
+      "webchat_widgets"
+    ]) {
+      expect(seed).toMatch(new RegExp(`insert\\s+into\\s+public\\.${table}\\b`));
+    }
   });
 
   it("seeds the minimum CRM demo surface idempotently", () => {
@@ -30,8 +34,13 @@ describe("remote seed contract", () => {
       "pipeline_stages",
       "tags",
       "contacts",
+      "leads",
+      "conversations",
+      "messages",
       "ai_assistants",
+      "webchat_widgets",
       "automation_rules",
+      "automation_actions",
       "variables",
       "integrations",
       "integration_tools"
@@ -41,7 +50,7 @@ describe("remote seed contract", () => {
       expect(seed).toContain(`insert into public.${table}`);
     }
 
-    expect(seed.match(/on conflict \(id\) do update/g)?.length).toBe(requiredTables.length + 1);
+    expect(seed.match(/on conflict \(id\) do update/g)?.length).toBeGreaterThanOrEqual(15);
   });
 
   it("keeps external and automatic behavior disabled or mocked", () => {

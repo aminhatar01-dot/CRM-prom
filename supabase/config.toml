@@ -2,12 +2,29 @@ project_id = "widehqbtmqiebaowidav"
 
 [api]
 enabled = true
+port = 55321
 
 [db]
 major_version = 15
+port = 55322
+shadow_port = 55320
 
 [auth]
 enabled = true
 
 [storage]
 enabled = true
+
+[studio]
+enabled = true
+port = 55323
+
+[inbucket]
+enabled = true
+port = 55324
+smtp_port = 55325
+pop3_port = 55326
+
+[analytics]
+enabled = true
+port = 55327

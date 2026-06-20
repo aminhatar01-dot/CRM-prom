@@ -1,8 +1,7 @@
 -- Idempotent demo seed compatible with the current remote schema.
 -- It never creates auth users, memberships, secrets, or real outbound events.
--- Leads, conversations, messages, lead_tags, automation_actions and webchat_widgets
--- are excluded because their current generic integrity triggers reference fields
--- that are not available on every attached table.
+-- Phase 13 table-specific integrity triggers allow the core CRM demo records
+-- to be seeded without auth users, secrets, or outbound side effects.
 
 insert into public.organizations (id, name, slug)
 values (
@@ -143,6 +142,46 @@ set full_name = excluded.full_name,
     location = excluded.location,
     notes = excluded.notes;
 
+insert into public.leads (
+  id,
+  organization_id,
+  title,
+  first_name,
+  last_name,
+  email,
+  phone,
+  company,
+  source,
+  status,
+  notes,
+  archived_at
+)
+values (
+  '00000000-0000-4000-8000-000000000101',
+  '00000000-0000-4000-8000-000000000001',
+  'Ana Torres',
+  'Ana',
+  'Torres',
+  'ana@example.com',
+  '+5491100000001',
+  'Torres Propiedades',
+  'manual',
+  'interesado',
+  'Solicita una demo comercial.',
+  null
+)
+on conflict (id) do update
+set title = excluded.title,
+    first_name = excluded.first_name,
+    last_name = excluded.last_name,
+    email = excluded.email,
+    phone = excluded.phone,
+    company = excluded.company,
+    source = excluded.source,
+    status = excluded.status,
+    notes = excluded.notes,
+    archived_at = null;
+
 insert into public.whatsapp_channel_settings (
   id,
   organization_id,
@@ -209,6 +248,109 @@ set name = excluded.name,
     channel_id = excluded.channel_id,
     auto_reply_enabled = false;
 
+insert into public.webchat_widgets (
+  id,
+  organization_id,
+  name,
+  primary_color,
+  initial_message,
+  position,
+  active,
+  allowed_domains,
+  assistant_id
+)
+values (
+  '00000000-0000-4000-8000-000000000801',
+  '00000000-0000-4000-8000-000000000001',
+  'WebChat Demo',
+  '#0f766e',
+  'Hola, como podemos ayudarte?',
+  'bottom-right',
+  false,
+  array['localhost', '127.0.0.1'],
+  '00000000-0000-4000-8000-000000000401'
+)
+on conflict (id) do update
+set name = excluded.name,
+    primary_color = excluded.primary_color,
+    initial_message = excluded.initial_message,
+    position = excluded.position,
+    active = false,
+    allowed_domains = excluded.allowed_domains,
+    assistant_id = excluded.assistant_id;
+
+insert into public.conversations (
+  id,
+  organization_id,
+  lead_id,
+  channel,
+  status,
+  ai_status,
+  ai_paused,
+  archived_at
+)
+values (
+  '00000000-0000-4000-8000-000000000301',
+  '00000000-0000-4000-8000-000000000001',
+  '00000000-0000-4000-8000-000000000101',
+  'manual',
+  'abierta',
+  'human',
+  false,
+  null
+)
+on conflict (id) do update
+set lead_id = excluded.lead_id,
+    channel = excluded.channel,
+    status = excluded.status,
+    ai_status = excluded.ai_status,
+    ai_paused = excluded.ai_paused,
+    archived_at = null;
+
+insert into public.messages (
+  id,
+  organization_id,
+  conversation_id,
+  direction,
+  sender_type,
+  body,
+  channel,
+  status,
+  metadata,
+  archived_at
+)
+values (
+  '00000000-0000-4000-8000-000000000302',
+  '00000000-0000-4000-8000-000000000001',
+  '00000000-0000-4000-8000-000000000301',
+  'inbound',
+  'contact',
+  'Quiero una demo y tengo un presupuesto de $2500.',
+  'manual',
+  'delivered',
+  '{"source":"phase_13_seed"}'::jsonb,
+  null
+)
+on conflict (id) do update
+set body = excluded.body,
+    status = excluded.status,
+    metadata = excluded.metadata,
+    archived_at = null;
+
+insert into public.lead_tags (
+  id,
+  organization_id,
+  lead_id,
+  tag_id
+)
+values (
+  '00000000-0000-4000-8000-000000000503',
+  '00000000-0000-4000-8000-000000000001',
+  '00000000-0000-4000-8000-000000000101',
+  '00000000-0000-4000-8000-000000000501'
+)
+on conflict (lead_id, tag_id) do nothing;
+
 insert into public.automation_rules (
   id,
   organization_id,
@@ -239,6 +381,30 @@ set name = excluded.name,
     enabled = false,
     trigger_config = excluded.trigger_config,
     conditions = excluded.conditions;
+
+insert into public.automation_actions (
+  id,
+  organization_id,
+  rule_id,
+  action_type,
+  config,
+  position,
+  enabled
+)
+values (
+  '00000000-0000-4000-8000-000000000702',
+  '00000000-0000-4000-8000-000000000001',
+  '00000000-0000-4000-8000-000000000701',
+  'create_task',
+  '{"title":"Coordinar demo"}'::jsonb,
+  1,
+  true
+)
+on conflict (id) do update
+set action_type = excluded.action_type,
+    config = excluded.config,
+    position = excluded.position,
+    enabled = excluded.enabled;
 
 insert into public.variables (
   id,

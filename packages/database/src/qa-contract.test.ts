@@ -20,10 +20,15 @@ describe("FASE 12 QA contracts", () => {
     const seed = readFileSync(resolve(root, "supabase/seed.sql"), "utf8");
     const requiredTables = [
       "contacts",
+      "leads",
+      "conversations",
+      "messages",
       "ai_assistants",
       "tags",
       "variables",
       "automation_rules",
+      "automation_actions",
+      "webchat_widgets",
       "integrations",
       "integration_tools"
     ];
@@ -32,11 +37,8 @@ describe("FASE 12 QA contracts", () => {
       expect(seed).toContain(`public.${table}`);
     }
 
-    expect(seed).not.toMatch(/insert\s+into\s+public\.leads\b/i);
-    expect(seed).not.toMatch(/insert\s+into\s+public\.conversations\b/i);
-    expect(seed).not.toMatch(/insert\s+into\s+public\.messages\b/i);
-    expect(seed).not.toMatch(/insert\s+into\s+public\.automation_actions\b/i);
-    expect(seed).not.toMatch(/insert\s+into\s+public\.webchat_widgets\b/i);
+    expect(seed).not.toContain("session_replication_role");
+    expect(seed).not.toContain("disable trigger");
   });
 
   it("keeps RLS documented and covered by its migration contract", () => {

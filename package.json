@@ -19,6 +19,7 @@
     "db:push": "npx supabase db push",
     "db:seed": "npx supabase db reset --local",
     "db:seed:remote": "npx supabase db push --linked --include-seed --yes",
+    "db:test:phase13": "node scripts/test-phase13-db.mjs",
     "format": "prettier . --write",
     "typecheck": "tsc --build --pretty"
   },
