@@ -82,6 +82,13 @@
 - Checklist interactivo y rollback.
 - Pasos manuales para Supabase, Vercel, Meta y dominios.
 
+### FASE 12
+
+- QA E2E integral.
+- Smoke de rutas, auth, healthcheck y canales.
+- Flujo CRM completo simulado sin servicios externos.
+- Contratos de datos demo, seguridad y documentacion.
+
 ## Siguiente
 
 - WebChat avanzado.

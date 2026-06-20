@@ -141,3 +141,15 @@ Deploy Assistant agrega:
 - contratos para docs, Git ignore y aislamiento de service role
 
 Las acciones sobre Vercel, Supabase, Meta, dominios y billing permanecen manuales y documentadas.
+
+## FASE 12
+
+QA integral agrega:
+
+- Playwright sobre un servidor QA aislado en el puerto 3100
+- Chrome del sistema seleccionable mediante `QA_BROWSER_CHANNEL`
+- smoke HTTP y navegador sin credenciales reales
+- flujo integral Vitest con repositorio WebChat en memoria
+- contratos de seeds, scripts, docs y RLS
+
+La suite no contacta OpenAI, WhatsApp ni Supabase remoto.
