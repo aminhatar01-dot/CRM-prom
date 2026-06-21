@@ -21,6 +21,12 @@ describe("Vercel monorepo contract", () => {
       })
     );
     expect(config).not.toHaveProperty("outputDirectory");
+    expect(config).toHaveProperty("crons", [
+      {
+        path: "/api/cron/whatsapp-tokens",
+        schedule: "0 6 * * *"
+      }
+    ]);
   });
 
   it("declares the Next.js runtime in the web workspace", () => {
