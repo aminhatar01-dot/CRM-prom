@@ -99,17 +99,33 @@ export function checkEnvironment(env, strict = false) {
     env.WHATSAPP_PHONE_NUMBER_ID
   ];
   const whatsappCount = whatsappValues.filter(Boolean).length;
+  const embeddedValues = [
+    env.WHATSAPP_VERIFY_TOKEN,
+    env.WHATSAPP_APP_SECRET,
+    env.META_APP_ID,
+    env.META_WHATSAPP_CONFIGURATION_ID,
+    env.WHATSAPP_TOKEN_ENCRYPTION_KEY,
+    env.SUPABASE_SERVICE_ROLE_KEY,
+    env.CRON_SECRET
+  ];
+  const embeddedCount = embeddedValues.filter(Boolean).length;
+  const whatsappValid =
+    (whatsappCount === 0 && embeddedCount === 0) ||
+    whatsappCount === whatsappValues.length ||
+    embeddedCount === embeddedValues.length;
   checks.push(
     result(
       "WhatsApp configuration",
-      whatsappCount === 0 || whatsappCount === whatsappValues.length ? "pass" : strict ? "fail" : "warn",
-      whatsappCount === 0
-        ? "Not configured; demo/manual CRM remains available"
-        : whatsappCount === whatsappValues.length
+      whatsappValid ? "pass" : strict ? "fail" : "warn",
+      embeddedCount === embeddedValues.length
+        ? "Meta Embedded Signup configured"
+        : whatsappCount === 0 && embeddedCount === 0
+          ? "Not configured; demo/manual CRM remains available"
+          : whatsappCount === whatsappValues.length
           ? "Core WhatsApp variables configured"
           : "Partial WhatsApp configuration"
-    )
-  );
+      )
+    );
 
   return checks;
 }
