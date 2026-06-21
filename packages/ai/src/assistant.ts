@@ -67,5 +67,7 @@ export type AIContext = {
     description?: string | null;
     input_schema?: Record<string, unknown>;
   }>;
+  smartTags?: Array<{ name: string; color?: string; description?: string | null }>;
+  variables?: Array<{ key: string; name: string; value: unknown; confidence?: number | null }>;
   userInput?: string;
 };

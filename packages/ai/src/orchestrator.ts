@@ -1,4 +1,5 @@
 import type { AIContext, AssistantConfig } from "./assistant";
+import { OpenAIResponsesClient, sanitizeAIText, type AIUsage } from "./openai-client";
 
 export type AIOrchestratorConfig = {
   apiKey?: string;
@@ -12,19 +13,15 @@ export type AIOrchestratorResult = {
   mode: "demo" | "openai";
   model: string;
   input: Record<string, unknown>;
+  usage: AIUsage;
+  responseId?: string;
 };
 
 export class AIOrchestrator {
-  private readonly apiKey?: string;
-  private readonly model: string;
-  private readonly demoMode: boolean;
-  private readonly fetcher: typeof fetch;
+  private readonly client: OpenAIResponsesClient;
 
   constructor(config: AIOrchestratorConfig = {}) {
-    this.apiKey = config.apiKey;
-    this.model = config.model ?? "gpt-5.5";
-    this.demoMode = config.demoMode ?? !config.apiKey;
-    this.fetcher = config.fetcher ?? fetch;
+    this.client = new OpenAIResponsesClient(config);
   }
 
   buildContext(context: AIContext) {
@@ -33,10 +30,16 @@ export class AIOrchestrator {
     const conversation = context.conversation;
     const history = context.messages
       .slice(-12)
-      .map((message) => `${message.direction.toUpperCase()} [${message.channel}/${message.status}]: ${message.body}`)
+      .map((message) => `${message.direction.toUpperCase()} [${message.channel}/${message.status}]: ${sanitizeAIText(message.body, 2_000)}`)
       .join("\n");
     const tools = (context.availableTools ?? [])
       .map((tool) => `- ${tool.name} (${tool.type}): ${tool.description ?? "Sin descripcion"}; input=${JSON.stringify(tool.input_schema ?? {})}`)
+      .join("\n");
+    const smartTags = (context.smartTags ?? [])
+      .map((tag) => `- ${tag.name}: ${tag.description ?? "sin descripcion"}`)
+      .join("\n");
+    const variables = (context.variables ?? [])
+      .map((variable) => `- ${variable.key} (${variable.name}) = ${JSON.stringify(variable.value)}; confidence=${variable.confidence ?? "n/a"}`)
       .join("\n");
 
     return [
@@ -51,6 +54,8 @@ export class AIOrchestrator {
         ? `Persona (${person.kind}): ${person.name}; email=${person.email ?? "n/a"}; telefono=${person.phone ?? "n/a"}; empresa=${person.company ?? "n/a"}; estado=${person.status ?? "n/a"}; notas=${person.notes ?? "n/a"}`
         : "Persona: desconocida",
       `Reglas: ${assistant.rules ?? "Sin reglas adicionales."}`,
+      `Smart Tags actuales:\n${smartTags || "Sin Smart Tags asignados."}`,
+      `Variables conocidas:\n${variables || "Sin variables extraidas."}`,
       `Herramientas disponibles (solo listar, no ejecutar automaticamente):\n${tools || "Sin herramientas externas disponibles."}`,
       `Historial reciente:\n${history || "Sin mensajes previos."}`,
       `Entrada del operador: ${context.userInput ?? "Sugerir la proxima respuesta."}`
@@ -64,47 +69,19 @@ export class AIOrchestrator {
       context: inputText
     };
 
-    if (this.demoMode || !this.apiKey) {
-      return {
-        output: this.demoReply(context),
-        mode: "demo",
-        model: this.model,
-        input
-      };
-    }
-
-    const response = await this.fetcher("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: this.model,
-        input: [
-          {
-            role: "system",
-            content: this.systemPrompt(context.assistant)
-          },
-          {
-            role: "user",
-            content: inputText
-          }
-        ]
-      })
+    const result = await this.client.text({
+      instructions: this.systemPrompt(context.assistant),
+      input: inputText,
+      demo: () => this.demoReply(context)
     });
 
-    const payload = (await response.json()) as OpenAIResponsePayload;
-
-    if (!response.ok) {
-      throw new Error(payload.error?.message ?? "OpenAI response failed.");
-    }
-
     return {
-      output: extractOutputText(payload) || context.assistant.fallback_message,
-      mode: "openai",
-      model: this.model,
-      input
+      output: result.data || context.assistant.fallback_message,
+      mode: result.mode,
+      model: result.model,
+      input,
+      usage: result.usage,
+      responseId: result.responseId
     };
   }
 
@@ -125,27 +102,4 @@ export class AIOrchestrator {
 
     return `Hola ${personName}, ${anchor} Te comparto una respuesta preliminar y puedo ayudarte a avanzar con el siguiente paso.`;
   }
-}
-
-type OpenAIResponsePayload = {
-  output_text?: string;
-  output?: Array<{
-    content?: Array<{
-      text?: string;
-      type?: string;
-    }>;
-  }>;
-  error?: {
-    message?: string;
-  };
-};
-
-function extractOutputText(payload: OpenAIResponsePayload) {
-  if (payload.output_text) return payload.output_text;
-
-  return payload.output
-    ?.flatMap((item) => item.content ?? [])
-    .map((content) => content.text)
-    .filter(Boolean)
-    .join("\n");
 }
