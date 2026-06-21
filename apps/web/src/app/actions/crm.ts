@@ -18,6 +18,7 @@ import { requireUser } from "@/lib/auth";
 import { actionErrorCode, addQueryParam } from "@/lib/action-errors";
 import { getServerEnv } from "@/lib/env";
 import { getActiveOrganization } from "@/lib/organization";
+import { getWhatsAppAccessToken } from "@/lib/whatsapp/token-store";
 import { z } from "zod";
 
 function value(formData: FormData, key: string) {
@@ -515,13 +516,20 @@ async function sendWhatsAppMessage({
   const recipient = conversation.contacts?.phone ?? conversation.leads?.phone;
   const { data: setting } = await supabase
     .from("whatsapp_channel_settings")
-    .select("phone_number_id, enabled")
+    .select("id, phone_number_id, enabled, connection_method")
     .eq("organization_id", organizationId)
     .eq("enabled", true)
     .limit(1)
-    .maybeSingle<{ phone_number_id: string; enabled: boolean }>();
+    .maybeSingle<{ id: string; phone_number_id: string; enabled: boolean; connection_method: string }>();
+  const accessToken = setting
+    ? await getWhatsAppAccessToken({
+        organizationId,
+        channelSettingId: setting.id,
+        connectionMethod: setting.connection_method
+      })
+    : null;
 
-  if (!recipient || !setting || !env.WHATSAPP_ACCESS_TOKEN) {
+  if (!recipient || !setting || !accessToken) {
     await supabase
       .from("messages")
       .update({
@@ -534,7 +542,7 @@ async function sendWhatsAppMessage({
   }
 
   const service = new WhatsAppCloudService({
-    accessToken: env.WHATSAPP_ACCESS_TOKEN,
+    accessToken,
     phoneNumberId: setting.phone_number_id,
     graphApiVersion: env.WHATSAPP_GRAPH_API_VERSION,
     appSecret: env.WHATSAPP_APP_SECRET

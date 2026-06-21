@@ -10,6 +10,7 @@
     "./tool-executor": "./src/tool-executor.ts",
     "./whatsapp": "./src/whatsapp.ts",
     "./whatsapp-cloud-service": "./src/whatsapp-cloud-service.ts",
+    "./meta-embedded-signup": "./src/meta-embedded-signup.ts",
     "./webchat": "./src/webchat.ts"
   }
 }
