@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, Search } from "lucide-react";
+import { Columns3, Plus, Search } from "lucide-react";
 import { leadSearchSchema, leadStatuses } from "@crm-pro-ai/database/crm";
 import { Button } from "@crm-pro-ai/ui/button";
 import { Card, CardContent, CardHeader } from "@crm-pro-ai/ui/card";
@@ -54,12 +54,20 @@ export default async function LeadsPage({
           <h1 className="text-2xl font-semibold tracking-normal">Leads</h1>
           <p className="text-sm text-muted-foreground">Gestiona oportunidades y responsables.</p>
         </div>
-        <Button asChild>
-          <Link href="/leads/new">
-            <Plus className="size-4" />
-            Nuevo lead
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link href="/pipeline">
+              <Columns3 className="size-4" />
+              Pipeline
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href="/leads/new">
+              <Plus className="size-4" />
+              Nuevo lead
+            </Link>
+          </Button>
+        </div>
       </div>
       <Card>
         <CardHeader>

@@ -55,6 +55,11 @@ export const leadUpdateSchema = leadInputSchema.extend({
   id: z.string().uuid()
 });
 
+export const leadPipelineStatusSchema = z.object({
+  id: z.string().uuid(),
+  status: z.enum(leadStatuses)
+});
+
 export const leadSearchSchema = z.object({
   q: z.string().trim().max(120).optional().default(""),
   status: z.enum(leadStatuses).or(z.literal("all")).optional().default("all")

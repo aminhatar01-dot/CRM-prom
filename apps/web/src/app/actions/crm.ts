@@ -8,6 +8,7 @@ import {
   conversationInputSchema,
   conversationUpdateSchema,
   leadInputSchema,
+  leadPipelineStatusSchema,
   leadUpdateSchema,
   messageInputSchema,
   messageUpdateSchema
@@ -118,6 +119,46 @@ export async function updateLead(formData: FormData) {
   revalidatePath("/leads");
   revalidatePath(`/leads/${id}`);
   redirect(`/leads/${id}`);
+}
+
+export async function updateLeadPipelineStatus(input: {
+  id: string;
+  status: string;
+}): Promise<{ ok: true; updatedAt: string } | { ok: false; error: string }> {
+  const parsed = leadPipelineStatusSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Estado o lead invalido." };
+
+  const { supabase, user } = await requireUser();
+  const organization = await getActiveOrganization(supabase, user);
+  const { data, error } = await supabase
+    .from("leads")
+    .update({ status: parsed.data.status })
+    .eq("id", parsed.data.id)
+    .eq("organization_id", organization.id)
+    .is("archived_at", null)
+    .select("id, updated_at")
+    .maybeSingle<{ id: string; updated_at: string }>();
+
+  if (error) {
+    const code = actionErrorCode(error);
+    return {
+      ok: false,
+      error:
+        code === "forbidden"
+          ? "No tienes permisos para mover este lead."
+          : "No pudimos actualizar el estado. Intenta nuevamente."
+    };
+  }
+  if (!data) return { ok: false, error: "El lead ya no existe o fue archivado." };
+
+  await audit("update_lead_pipeline_status", "leads", data.id, organization.id, {
+    status: parsed.data.status
+  });
+  revalidatePath("/pipeline");
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${data.id}`);
+
+  return { ok: true, updatedAt: data.updated_at };
 }
 
 export async function convertLeadToContact(formData: FormData) {

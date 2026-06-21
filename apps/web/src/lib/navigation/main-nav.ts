@@ -1,6 +1,7 @@
 import {
   Bot,
   Braces,
+  Columns3,
   LayoutDashboard,
   MessageSquareText,
   Plug,
@@ -15,6 +16,7 @@ import { canManageSettings } from "../permissions/roles";
 export const mainNavigationItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, adminOnly: false },
   { href: "/leads", label: "Leads", icon: UsersRound, adminOnly: false },
+  { href: "/pipeline", label: "Pipeline", icon: Columns3, adminOnly: false },
   { href: "/contacts", label: "Contactos", icon: UsersRound, adminOnly: false },
   { href: "/inbox", label: "Inbox", icon: MessageSquareText, adminOnly: false },
   { href: "/assistants", label: "Asistentes", icon: Sparkles, adminOnly: true },
