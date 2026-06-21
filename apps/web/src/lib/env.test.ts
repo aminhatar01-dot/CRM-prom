@@ -19,4 +19,15 @@ describe("env validation", () => {
     expect(result.ok).toBe(false);
     expect(result.missing).toEqual(["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"]);
   });
+
+  it("requires an OpenAI key when demo mode is disabled", () => {
+    const result = validateServerEnv({
+      NEXT_PUBLIC_SUPABASE_URL: "https://widehqbtmqiebaowidav.supabase.co",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon",
+      AI_DEMO_MODE: "false"
+    } as NodeJS.ProcessEnv);
+
+    expect(result.ok).toBe(false);
+    expect(result.issues.join(" ")).toContain("OPENAI_API_KEY");
+  });
 });

@@ -87,7 +87,12 @@ describe("AIOrchestrator", () => {
   it("calls OpenAI Responses API when an API key exists", async () => {
     const fetcher = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ output_text: "Respuesta sugerida" })
+      status: 200,
+      json: async () => ({
+        id: "resp_test",
+        output_text: "Respuesta sugerida",
+        usage: { input_tokens: 80, output_tokens: 12, total_tokens: 92 }
+      })
     });
     const orchestrator = new AIOrchestrator({
       apiKey: "sk-test",
@@ -100,6 +105,7 @@ describe("AIOrchestrator", () => {
 
     expect(result.mode).toBe("openai");
     expect(result.output).toBe("Respuesta sugerida");
+    expect(result.usage.totalTokens).toBe(92);
     expect(fetcher).toHaveBeenCalledWith(
       "https://api.openai.com/v1/responses",
       expect.objectContaining({ method: "POST" }),

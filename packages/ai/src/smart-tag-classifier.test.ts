@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { SmartTagClassifier } from "./smart-tag-classifier";
 import { smartTagAssignmentSchema, smartTagSchema, type SmartTagDefinition } from "./smart-tags";
 
@@ -40,9 +40,9 @@ describe("smart tag schemas", () => {
 });
 
 describe("SmartTagClassifier", () => {
-  it("classifies matching demo conversations", () => {
+  it("classifies matching demo conversations", async () => {
     const classifier = new SmartTagClassifier({ demoMode: true });
-    const [result] = classifier.classify([tag], {
+    const { results: [result], mode } = await classifier.classify([tag], {
       lead: { name: "Ana Torres", status: "nuevo" },
       conversation: {
         id: "00000000-0000-4000-8000-000000000301",
@@ -55,6 +55,7 @@ describe("SmartTagClassifier", () => {
 
     expect(result?.matched).toBe(true);
     expect(result?.confidence).toBeGreaterThan(0.5);
+    expect(mode).toBe("demo");
   });
 
   it("preserves auto pause configuration for matched tags", () => {
@@ -66,6 +67,34 @@ describe("SmartTagClassifier", () => {
     const input = classifier.buildInput([tag], { messages: [] });
 
     expect(input.tags[0]?.id).toBe(tag.id);
+  });
+
+  it("uses OpenAI structured output without a real network call", async () => {
+    const fetcher = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        id: "resp_test",
+        output_text: JSON.stringify({
+          results: [{ tagId: tag.id, matched: true, confidence: 0.91, reason: "Pregunta por presupuesto." }]
+        }),
+        usage: { input_tokens: 100, output_tokens: 20, total_tokens: 120 }
+      })
+    });
+    const classifier = new SmartTagClassifier({
+      apiKey: "sk-test",
+      model: "gpt-test",
+      demoMode: false,
+      fetcher
+    });
+
+    const result = await classifier.classify([tag], {
+      messages: [{ direction: "inbound", body: "Necesito presupuesto." }]
+    });
+
+    expect(result.mode).toBe("openai");
+    expect(result.results[0]?.matched).toBe(true);
+    expect(result.usage.totalTokens).toBe(120);
   });
 });
 

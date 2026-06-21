@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { VariableExtractor } from "./variable-extractor";
 import { validateVariableValue, variableSchema, type VariableDefinition } from "./variables";
 
@@ -40,9 +40,9 @@ describe("variable schemas", () => {
 });
 
 describe("VariableExtractor", () => {
-  it("extracts values in demo mode with confidence and source message", () => {
+  it("extracts values in demo mode with confidence and source message", async () => {
     const extractor = new VariableExtractor();
-    const [result] = extractor.extract([priceVariable], {
+    const { results: [result], mode } = await extractor.extract([priceVariable], {
       lead: { name: "Ana Torres" },
       messages: [
         {
@@ -57,6 +57,7 @@ describe("VariableExtractor", () => {
     expect(result?.value).toBe(1500);
     expect(result?.confidence).toBeGreaterThan(0.5);
     expect(result?.sourceMessageId).toBe("00000000-0000-4000-8000-000000000701");
+    expect(mode).toBe("demo");
   });
 
   it("keeps tenant identity in extraction input", () => {
@@ -64,6 +65,40 @@ describe("VariableExtractor", () => {
     const input = extractor.buildInput([priceVariable], { messages: [] });
 
     expect(input.variables[0]?.id).toBe(priceVariable.id);
+  });
+
+  it("uses OpenAI structured output and validates the variable type", async () => {
+    const messageId = "00000000-0000-4000-8000-000000000701";
+    const fetcher = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        output_text: JSON.stringify({
+          results: [{
+            variableId: priceVariable.id,
+            extracted: true,
+            value: 2500,
+            confidence: 0.94,
+            sourceMessageId: messageId,
+            reason: "Monto explicito."
+          }]
+        }),
+        usage: { input_tokens: 90, output_tokens: 25, total_tokens: 115 }
+      })
+    });
+    const extractor = new VariableExtractor({
+      apiKey: "sk-test",
+      model: "gpt-test",
+      demoMode: false,
+      fetcher
+    });
+    const result = await extractor.extract([priceVariable], {
+      messages: [{ id: messageId, direction: "inbound", body: "Mi presupuesto es 2500." }]
+    });
+
+    expect(result.mode).toBe("openai");
+    expect(result.results[0]?.value).toBe(2500);
+    expect(result.usage.totalTokens).toBe(115);
   });
 });
 

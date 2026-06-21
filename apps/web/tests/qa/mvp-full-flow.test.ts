@@ -143,7 +143,7 @@ describe("FASE 12 simulated MVP journey", () => {
       auto_pause_assistant: false,
       notify_team: true
     };
-    const [classification] = new SmartTagClassifier().classify([tag], {
+    const { results: [classification] } = await new SmartTagClassifier({ demoMode: true }).classify([tag], {
       lead: {
         name: `${lead.first_name} ${lead.last_name}`,
         company: lead.company,
@@ -167,7 +167,7 @@ describe("FASE 12 simulated MVP journey", () => {
       required: false,
       options: []
     };
-    const [extraction] = new VariableExtractor().extract([variable], {
+    const { results: [extraction] } = await new VariableExtractor({ demoMode: true }).extract([variable], {
       lead: { id: lead.id, name: `${lead.first_name} ${lead.last_name}` },
       conversation,
       messages: [{ id: inbound.id, direction: "inbound", body: inbound.body }]
