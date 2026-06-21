@@ -1,3 +1,7 @@
+param(
+  [string]$PlaywrightConfig = "apps/web/phase14.playwright.config.ts"
+)
+
 $ErrorActionPreference = "Stop"
 
 $startedSupabase = $false
@@ -23,7 +27,7 @@ function Read-SupabaseEnv {
 try {
   $supabase = Read-SupabaseEnv
   if (-not $supabase -or -not $supabase["API_URL"]) {
-    & cmd /d /s /c "npx supabase start -x edge-runtime,imgproxy,mailpit,studio,vector,logflare,storage-api,realtime --ignore-health-check"
+    & cmd /d /s /c "npx supabase start -x edge-runtime,imgproxy,mailpit,studio,vector,logflare,storage-api,realtime --ignore-health-check >nul 2>&1"
     if ($LASTEXITCODE -ne 0) {
       throw "Supabase local could not be started."
     }
@@ -62,7 +66,7 @@ try {
   $env:PHASE14_TEST_EMAIL = $email
   $env:PHASE14_TEST_PASSWORD = $password
 
-  & cmd /d /s /c "npx playwright test --config apps/web/phase14.playwright.config.ts"
+  & cmd /d /s /c "npx playwright test --config $PlaywrightConfig"
   $exitCode = $LASTEXITCODE
 }
 finally {

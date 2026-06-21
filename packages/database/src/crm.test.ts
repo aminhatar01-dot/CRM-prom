@@ -5,6 +5,7 @@ import {
   contactInputSchema,
   conversationInputSchema,
   leadInputSchema,
+  leadPipelineStatusSchema,
   messageInputSchema
 } from "./crm";
 
@@ -24,6 +25,25 @@ describe("crm schemas", () => {
 
     expect(lead.status).toBe("nuevo");
     expect(lead.owner_id).toBeNull();
+  });
+
+  it("validates pipeline status changes", () => {
+    expect(
+      leadPipelineStatusSchema.parse({
+        id: "00000000-0000-4000-8000-000000000101",
+        status: "propuesta"
+      }),
+    ).toEqual({
+      id: "00000000-0000-4000-8000-000000000101",
+      status: "propuesta"
+    });
+
+    expect(() =>
+      leadPipelineStatusSchema.parse({
+        id: "00000000-0000-4000-8000-000000000101",
+        status: "invalid"
+      }),
+    ).toThrow();
   });
 
   it("validates contact payloads", () => {
