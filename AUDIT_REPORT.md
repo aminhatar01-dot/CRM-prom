@@ -847,3 +847,22 @@ Estado revisado de los hallazgos:
 | Pipeline/Kanban | Pendiente, fuera de FASE 13 |
 | Smart Tags y Variables con IA demo | Pendiente, fuera de FASE 13 |
 | Automatizaciones por eventos y send_message real | Pendiente, fuera de FASE 13 |
+
+## 19. Actualizacion FASE 14
+
+Estado: recuperacion funcional validada el 2026-06-21.
+
+Resuelto:
+
+- dashboard fuera del shell CRM;
+- tarjetas KPI sin navegacion;
+- contador de assistants hardcodeado;
+- ausencia total de menu movil;
+- formularios prioritarios sin feedback pendiente;
+- Custom Connect invalido cuando description estaba vacia;
+- errores ignorados en escrituras hijas de Automations e Integrations;
+- posible Integration huerfana;
+- `next dev` afectado por `.next` corrupto en OneDrive;
+- ausencia de un E2E autenticado con PostgreSQL real.
+
+El recorrido Playwright real pasa para Login, Onboarding, Dashboard, Leads, Contacts, Inbox, Messages, Assistants, Smart Tags, Variables, Automations e Integrations.

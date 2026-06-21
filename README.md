@@ -96,6 +96,20 @@ SaaS CRM multi tenant construido con Next.js 15, Supabase y OpenAI.
 - Flujo simulado completo desde lead hasta Inbox, IA, tags, variables, automatizaciones e integraciones.
 - Sin llamadas a OpenAI, WhatsApp o Supabase remoto.
 
+## FASE 13
+
+- Triggers multi tenant especificos por tabla.
+- CRUD con archivo no destructivo.
+- Pruebas PostgreSQL reales de RLS e integridad.
+
+## FASE 14
+
+- Dashboard integrado al shell operativo.
+- Navegacion funcional desktop y movil.
+- Recuperacion end-to-end de los CRUD prioritarios.
+- Automation manual e Integration probadas mediante UI.
+- Playwright autenticado contra Supabase local real.
+
 ## Validacion
 
 ```bash
@@ -106,6 +120,7 @@ npm run validate
 npm run deploy:check
 npm run qa:smoke
 npm run qa:e2e
+npm run qa:functional
 ```
 
 Consulta [docs/DEPLOY_ASSISTANT.md](docs/DEPLOY_ASSISTANT.md), [docs/DEPLOY_CHECKLIST.md](docs/DEPLOY_CHECKLIST.md), [docs/NEXT_STEPS_FOR_USER.md](docs/NEXT_STEPS_FOR_USER.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATABASE.md](docs/DATABASE.md), [docs/ROADMAP.md](docs/ROADMAP.md), [docs/DEPLOYMENT_VERCEL_SUPABASE.md](docs/DEPLOYMENT_VERCEL_SUPABASE.md), [docs/PRODUCTION_CHECKLIST.md](docs/PRODUCTION_CHECKLIST.md), [docs/PHASE_10_VALIDATION.md](docs/PHASE_10_VALIDATION.md), [docs/AI_ORCHESTRATION.md](docs/AI_ORCHESTRATION.md), [docs/SMART_TAGS.md](docs/SMART_TAGS.md), [docs/VARIABLES.md](docs/VARIABLES.md), [docs/AUTOMATIONS.md](docs/AUTOMATIONS.md), [docs/WEBCHAT.md](docs/WEBCHAT.md), [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md), [docs/CUSTOM_CONNECT.md](docs/CUSTOM_CONNECT.md), [docs/GOOGLE_SHEETS.md](docs/GOOGLE_SHEETS.md), [docs/WHATSAPP_SETUP.md](docs/WHATSAPP_SETUP.md) y [docs/supabase-setup.md](docs/supabase-setup.md).
