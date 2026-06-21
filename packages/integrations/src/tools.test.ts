@@ -4,6 +4,24 @@ import { customConnectToolSchema, integrationSchema, validateToolTenant } from "
 const organizationId = "00000000-0000-4000-8000-000000000001";
 
 describe("integration schemas", () => {
+  it("accepts an empty optional description from the create form", () => {
+    const parsed = customConnectToolSchema.parse({
+      organization_id: organizationId,
+      name: "Functional connector",
+      description: null,
+      method: "GET",
+      url: "mock://success",
+      headers_schema: {},
+      body_schema: {},
+      response_schema: {},
+      active: false,
+      timeout_ms: "8000",
+      config: {}
+    });
+
+    expect(parsed.description).toBeNull();
+  });
+
   it("validates integration creation", () => {
     const integration = integrationSchema.parse({
       organization_id: organizationId,

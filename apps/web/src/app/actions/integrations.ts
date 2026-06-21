@@ -7,6 +7,7 @@ import {
   googleSheetsConnectionSchema
 } from "@crm-pro-ai/integrations/tools";
 import { requireUser } from "@/lib/auth";
+import { actionErrorCode } from "@/lib/action-errors";
 import { runIntegrationTool } from "@/lib/integrations/executor";
 import { getActiveOrganization } from "@/lib/organization";
 
@@ -61,7 +62,9 @@ export async function createCustomConnect(formData: FormData) {
     .select("id")
     .single<{ id: string }>();
 
-  if (integrationError || !integration) redirect("/integrations/new?error=create");
+  if (integrationError || !integration) {
+    redirect(`/integrations/new?error=${actionErrorCode(integrationError)}`);
+  }
 
   const { data: tool, error: toolError } = await supabase
     .from("integration_tools")
@@ -72,7 +75,10 @@ export async function createCustomConnect(formData: FormData) {
     .select("id")
     .single<{ id: string }>();
 
-  if (toolError || !tool) redirect("/integrations/new?error=tool");
+  if (toolError || !tool) {
+    await supabase.from("integrations").delete().eq("id", integration.id).eq("organization_id", organization.id);
+    redirect(`/integrations/new?error=${actionErrorCode(toolError)}`);
+  }
 
   await audit("create_custom_connect", "integrations", integration.id, organization.id);
   revalidatePath("/integrations");
@@ -101,7 +107,7 @@ export async function updateCustomConnect(formData: FormData) {
 
   if (!parsed.success) redirect(`/integrations/${integrationId}/edit?error=invalid`);
 
-  await supabase
+  const { data: updatedIntegration, error: integrationError } = await supabase
     .from("integrations")
     .update({
       name: parsed.data.name,
@@ -109,7 +115,13 @@ export async function updateCustomConnect(formData: FormData) {
       active: parsed.data.active
     })
     .eq("id", integrationId)
-    .eq("organization_id", organization.id);
+    .eq("organization_id", organization.id)
+    .select("id")
+    .maybeSingle<{ id: string }>();
+  if (integrationError) {
+    redirect(`/integrations/${integrationId}/edit?error=${actionErrorCode(integrationError)}`);
+  }
+  if (!updatedIntegration) redirect(`/integrations/${integrationId}/edit?error=not-found`);
 
   const { error } = await supabase
     .from("integration_tools")
@@ -117,7 +129,7 @@ export async function updateCustomConnect(formData: FormData) {
     .eq("id", id)
     .eq("organization_id", organization.id);
 
-  if (error) redirect(`/integrations/${integrationId}/edit?error=update`);
+  if (error) redirect(`/integrations/${integrationId}/edit?error=${actionErrorCode(error)}`);
 
   await audit("update_custom_connect", "integrations", integrationId, organization.id);
   revalidatePath("/integrations");
@@ -154,9 +166,11 @@ export async function setupGoogleSheets(formData: FormData) {
     .select("id")
     .single<{ id: string }>();
 
-  if (integrationError || !integration) redirect("/integrations/google-sheets?error=create");
+  if (integrationError || !integration) {
+    redirect(`/integrations/google-sheets?error=${actionErrorCode(integrationError)}`);
+  }
 
-  const { data: tool } = await supabase
+  const { data: tool, error: toolError } = await supabase
     .from("integration_tools")
     .insert({
       organization_id: organization.id,
@@ -172,8 +186,12 @@ export async function setupGoogleSheets(formData: FormData) {
     })
     .select("id")
     .single<{ id: string }>();
+  if (toolError || !tool) {
+    await supabase.from("integrations").delete().eq("id", integration.id).eq("organization_id", organization.id);
+    redirect(`/integrations/google-sheets?error=${actionErrorCode(toolError)}`);
+  }
 
-  await supabase.from("google_sheets_connections").insert({
+  const { error: connectionError } = await supabase.from("google_sheets_connections").insert({
     organization_id: organization.id,
     integration_id: integration.id,
     spreadsheet_url: parsed.data.spreadsheet_url,
@@ -181,6 +199,10 @@ export async function setupGoogleSheets(formData: FormData) {
     api_key_ref: parsed.data.api_key_ref,
     active: parsed.data.active
   });
+  if (connectionError) {
+    await supabase.from("integrations").delete().eq("id", integration.id).eq("organization_id", organization.id);
+    redirect(`/integrations/google-sheets?error=${actionErrorCode(connectionError)}`);
+  }
 
   await audit("setup_google_sheets", "integrations", integration.id, organization.id);
   revalidatePath("/integrations");

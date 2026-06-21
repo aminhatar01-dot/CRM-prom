@@ -9,6 +9,7 @@ import {
   taskSchema
 } from "@crm-pro-ai/automation/rules";
 import { executeAutomationRun, type SupabaseLike } from "@/lib/automation/runner";
+import { actionErrorCode, addQueryParam } from "@/lib/action-errors";
 import { requireUser } from "@/lib/auth";
 import { getActiveOrganization } from "@/lib/organization";
 
@@ -56,9 +57,18 @@ export async function createAutomationRule(formData: FormData) {
     .select("id")
     .single<{ id: string }>();
 
-  if (error || !data) redirect("/automations/new?error=create");
+  if (error || !data) redirect(`/automations/new?error=${actionErrorCode(error)}`);
 
-  await insertActions({ supabase, organizationId: organization.id, ruleId: data.id, actions });
+  const actionsError = await insertActions({
+    supabase,
+    organizationId: organization.id,
+    ruleId: data.id,
+    actions
+  });
+  if (actionsError) {
+    await supabase.from("automation_rules").delete().eq("id", data.id).eq("organization_id", organization.id);
+    redirect(`/automations/new?error=${actionErrorCode(actionsError)}`);
+  }
   await audit("create_automation_rule", "automation_rules", data.id, organization.id);
 
   revalidatePath("/automations");
@@ -74,19 +84,51 @@ export async function updateAutomationRule(formData: FormData) {
   if (!parsed.success) redirect(`/automations/${id}/edit?error=invalid`);
 
   const { actions, ...rule } = parsed.data;
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("automation_rules")
     .update({
       ...rule,
       enabled: rule.status === "active"
     })
     .eq("id", id)
+    .eq("organization_id", organization.id)
+    .select("id")
+    .maybeSingle<{ id: string }>();
+
+  if (error) redirect(`/automations/${id}/edit?error=${actionErrorCode(error)}`);
+  if (!updated) redirect(`/automations/${id}/edit?error=not-found`);
+
+  const { data: previousActions } = await supabase
+    .from("automation_actions")
+    .select("action_type, config, enabled, position")
+    .eq("rule_id", id)
+    .eq("organization_id", organization.id)
+    .order("position");
+  const { error: deleteError } = await supabase
+    .from("automation_actions")
+    .delete()
+    .eq("rule_id", id)
     .eq("organization_id", organization.id);
+  if (deleteError) redirect(`/automations/${id}/edit?error=${actionErrorCode(deleteError)}`);
 
-  if (error) redirect(`/automations/${id}/edit?error=update`);
-
-  await supabase.from("automation_actions").delete().eq("rule_id", id).eq("organization_id", organization.id);
-  await insertActions({ supabase, organizationId: organization.id, ruleId: id, actions });
+  const actionsError = await insertActions({
+    supabase,
+    organizationId: organization.id,
+    ruleId: id,
+    actions
+  });
+  if (actionsError) {
+    if (previousActions?.length) {
+      await supabase.from("automation_actions").insert(
+        previousActions.map((action) => ({
+          organization_id: organization.id,
+          rule_id: id,
+          ...action
+        })),
+      );
+    }
+    redirect(`/automations/${id}/edit?error=${actionErrorCode(actionsError)}`);
+  }
   await audit("update_automation_rule", "automation_rules", id, organization.id);
 
   revalidatePath("/automations");
@@ -128,7 +170,7 @@ export async function scheduleManualAutomationRun(formData: FormData) {
       context: { organization_id: string };
     }>();
 
-  if (error || !data) redirect(`${returnTo}?error=schedule-run`);
+  if (error || !data) redirect(addQueryParam(returnTo, "error", actionErrorCode(error)));
 
   await executeAutomationRun(supabase as unknown as SupabaseLike, data, true);
   await audit("manual_automation_run", "automation_runs", data.id, organization.id);
@@ -160,7 +202,7 @@ export async function createManualFollowUp(formData: FormData) {
     created_by: user.id
   });
 
-  if (error) redirect(`${returnTo}?error=create-follow-up`);
+  if (error) redirect(addQueryParam(returnTo, "error", actionErrorCode(error)));
 
   await audit("create_manual_follow_up", "tasks", undefined, organization.id, {
     lead_id: parsed.data.lead_id,
@@ -182,7 +224,7 @@ async function insertActions({
   actions: unknown[];
 }) {
   const parsedActions = actions.map((action) => automationActionSchema.parse(action));
-  await supabase.from("automation_actions").insert(
+  const { error } = await supabase.from("automation_actions").insert(
     parsedActions.map((action, index) => ({
       organization_id: organizationId,
       rule_id: ruleId,
@@ -192,6 +234,7 @@ async function insertActions({
       position: index + 1
     })),
   );
+  return error;
 }
 
 async function audit(

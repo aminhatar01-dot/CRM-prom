@@ -12,6 +12,7 @@ const optionalText = (max = 1000) =>
     .max(max)
     .or(z.literal(""))
     .optional()
+    .nullable()
     .transform((value) => (value ? value : null));
 
 export const integrationSchema = z.object({
