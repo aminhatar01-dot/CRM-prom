@@ -1,5 +1,8 @@
 # WhatsApp Cloud API
 
+Para nuevas organizaciones usar Meta Embedded Signup según
+`docs/PHASE_17_META_EMBEDDED_SIGNUP.md`. La carga manual descrita en este documento queda como compatibilidad heredada.
+
 CRM PRO AI usa la WhatsApp Cloud API oficial de Meta para recibir webhooks y enviar mensajes manuales desde el Inbox.
 
 Fuentes oficiales consultadas:
