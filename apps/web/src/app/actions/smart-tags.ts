@@ -11,6 +11,7 @@ import {
 } from "@crm-pro-ai/ai/smart-tags";
 import { requireUser } from "@/lib/auth";
 import { actionErrorCode } from "@/lib/action-errors";
+import { enforceAIRateLimit, getAIRuntimeConfig, summarizeAIInput, usageMetadata } from "@/lib/ai/runtime";
 import { getActiveOrganization } from "@/lib/organization";
 import {
   buildSmartTagConversationContext,
@@ -145,18 +146,54 @@ export async function analyzeConversationSmartTags(formData: FormData) {
     .returns<TagRow[]>();
 
   const tags = (tagRows ?? []).map(mapSmartTag);
+  if (tags.length === 0) redirect(`/inbox?conversation=${conversationId}&error=no-smart-tags`);
   const { context, leadId } = await buildSmartTagConversationContext({
     supabase,
     organizationId: organization.id,
     conversationId
   });
-  const classifier = new SmartTagClassifier({ demoMode: true });
-  const input = classifier.buildInput(tags, context);
-  const results = classifier.classify(tags, context);
+  const runtime = getAIRuntimeConfig();
+  const classifier = new SmartTagClassifier(runtime);
+  let classification;
+  try {
+    await enforceAIRateLimit(supabase, organization.id);
+    classification = await classifier.classify(tags, context);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Smart Tag classification failed";
+    await supabase.from("ai_logs").insert({
+      organization_id: organization.id,
+      conversation_id: conversationId,
+      provider: "openai",
+      model: runtime.model,
+      mode: runtime.demoMode ? "demo" : "openai",
+      input: { source: "smart_tag_classification" },
+      status: "error",
+      error_message: message
+    });
+    redirect(`/inbox?conversation=${conversationId}&error=ai-tags`);
+  }
+  const { data: aiLog } = await supabase
+    .from("ai_logs")
+    .insert({
+      organization_id: organization.id,
+      conversation_id: conversationId,
+      provider: "openai",
+      model: classification.model,
+      mode: classification.mode,
+      input: summarizeAIInput(classification.input),
+      output: JSON.stringify(classification.results),
+      status: "success",
+      metadata: usageMetadata(classification.usage, {
+        source: "smart_tag_classification",
+        response_id: classification.responseId
+      })
+    })
+    .select("id")
+    .single<{ id: string }>();
   let matchedCount = 0;
   let paused = false;
 
-  for (const result of results) {
+  for (const result of classification.results) {
     const tag = tags.find((item) => item.id === result.tagId);
     if (!tag) continue;
 
@@ -167,11 +204,12 @@ export async function analyzeConversationSmartTags(formData: FormData) {
         conversation_id: conversationId,
         lead_id: leadId,
         tag_id: tag.id,
-        mode: "demo",
+        ai_log_id: aiLog?.id,
+        mode: classification.mode,
         matched: result.matched,
         confidence: result.confidence,
         reason: result.reason,
-        input,
+        input: classification.input,
         output: result
       })
       .select("id")
@@ -185,7 +223,7 @@ export async function analyzeConversationSmartTags(formData: FormData) {
           conversation_id: conversationId,
           tag_id: tag.id,
           assigned_by: user.id,
-          assignment_source: "ai_demo"
+          assignment_source: classification.mode === "demo" ? "ai_demo" : "ai_openai"
         },
         { onConflict: "conversation_id,tag_id" },
       );

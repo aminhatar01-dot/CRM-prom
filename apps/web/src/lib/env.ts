@@ -14,7 +14,7 @@ const serverEnvSchema = publicEnvSchema.extend({
   WHATSAPP_APP_SECRET: z.string().min(1).optional(),
   WHATSAPP_GRAPH_API_VERSION: z.string().min(1).default("v23.0"),
   OPENAI_API_KEY: z.string().min(1).optional(),
-  OPENAI_MODEL: z.string().min(1).default("gpt-5.5"),
+  OPENAI_MODEL: z.string().min(1).default("gpt-5.2"),
   CRON_SECRET: z.string().min(1).optional(),
   AI_DEMO_MODE: z
     .enum(["true", "false"])
@@ -83,11 +83,16 @@ export function validateServerEnv(env: NodeJS.ProcessEnv = process.env) {
     CRON_SECRET: env.CRON_SECRET,
     AI_DEMO_MODE: env.AI_DEMO_MODE
   });
+  const missingOpenAIKey = parsed.success && !parsed.data.AI_DEMO_MODE && !parsed.data.OPENAI_API_KEY;
 
   return {
-    ok: parsed.success,
-    data: parsed.success ? parsed.data : null,
+    ok: parsed.success && !missingOpenAIKey,
+    data: parsed.success && !missingOpenAIKey ? parsed.data : null,
     missing: requiredEnvVars.filter((key) => !env[key]),
-    issues: parsed.success ? [] : parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+    issues: parsed.success
+      ? missingOpenAIKey
+        ? ["OPENAI_API_KEY: required when AI_DEMO_MODE is false"]
+        : []
+      : parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`)
   };
 }

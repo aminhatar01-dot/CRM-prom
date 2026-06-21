@@ -15,7 +15,14 @@ const errorMessages: Record<string, string> = {
   archive: "No pudimos archivar el registro.",
   "create-conversation": "No pudimos crear la conversacion.",
   "create-message": "No pudimos guardar el mensaje.",
-  "update-conversation": "No pudimos actualizar la conversacion."
+  "update-conversation": "No pudimos actualizar la conversacion.",
+  "ai-suggestion": "No pudimos generar la sugerencia. Revisa la configuracion de OpenAI o intenta nuevamente.",
+  ai: "No pudimos completar la solicitud de IA. Revisa la configuracion o intenta nuevamente.",
+  "ai-tags": "No pudimos analizar los Smart Tags con IA.",
+  "ai-variables": "No pudimos extraer variables con IA.",
+  "no-assistant": "No hay un asistente activo para esta conversacion.",
+  "no-smart-tags": "No hay Smart Tags activos para analizar.",
+  "no-variables": "No hay Variables Inteligentes activas para extraer."
 };
 
 const successMessages: Record<string, string> = {

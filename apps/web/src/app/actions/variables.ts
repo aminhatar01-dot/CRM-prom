@@ -7,6 +7,7 @@ import { VariableExtractor } from "@crm-pro-ai/ai/variable-extractor";
 import { variableSchema, variableUpdateSchema } from "@crm-pro-ai/ai/variables";
 import { requireUser } from "@/lib/auth";
 import { actionErrorCode } from "@/lib/action-errors";
+import { enforceAIRateLimit, getAIRuntimeConfig, summarizeAIInput, usageMetadata } from "@/lib/ai/runtime";
 import { getActiveOrganization } from "@/lib/organization";
 import {
   buildConversationVariableContext,
@@ -98,12 +99,27 @@ export async function extractConversationVariables(formData: FormData) {
     organizationId: organization.id,
     conversationId
   });
-  const extractor = new VariableExtractor();
-  const input = extractor.buildInput(variables, context);
-  const results = extractor.extract(variables, context);
+  if (variables.length === 0) redirect(`/inbox?conversation=${conversationId}&error=no-variables`);
+  const runtime = getAIRuntimeConfig();
+  const extractor = new VariableExtractor(runtime);
+  let extraction;
+  try {
+    await enforceAIRateLimit(supabase, organization.id);
+    extraction = await extractor.extract(variables, context);
+  } catch (error) {
+    await logAIError(supabase, organization.id, runtime, error, {
+      conversation_id: conversationId,
+      source: "conversation_variable_extraction"
+    });
+    redirect(`/inbox?conversation=${conversationId}&error=ai-variables`);
+  }
+  await logAISuccess(supabase, organization.id, extraction, {
+    conversation_id: conversationId,
+    source: "conversation_variable_extraction"
+  });
   let extractedCount = 0;
 
-  for (const result of results) {
+  for (const result of extraction.results) {
     const variable = variables.find((item) => item.id === result.variableId);
     if (!variable) continue;
 
@@ -115,12 +131,12 @@ export async function extractConversationVariables(formData: FormData) {
         lead_id: leadId,
         conversation_id: conversationId,
         source_message_id: result.sourceMessageId,
-        mode: "demo",
+        mode: extraction.mode,
         extracted: result.extracted,
         value: result.value,
         confidence: result.confidence,
         reason: result.reason,
-        input,
+        input: extraction.input,
         output: result
       })
       .select("id")
@@ -176,12 +192,27 @@ export async function extractLeadVariables(formData: FormData) {
     organizationId: organization.id,
     leadId
   });
-  const extractor = new VariableExtractor();
-  const input = extractor.buildInput(variables, context);
-  const results = extractor.extract(variables, context);
+  if (variables.length === 0) redirect(`/leads/${leadId}?error=no-variables`);
+  const runtime = getAIRuntimeConfig();
+  const extractor = new VariableExtractor(runtime);
+  let extraction;
+  try {
+    await enforceAIRateLimit(supabase, organization.id);
+    extraction = await extractor.extract(variables, context);
+  } catch (error) {
+    await logAIError(supabase, organization.id, runtime, error, {
+      lead_id: leadId,
+      source: "lead_variable_extraction"
+    });
+    redirect(`/leads/${leadId}?error=ai-variables`);
+  }
+  await logAISuccess(supabase, organization.id, extraction, {
+    lead_id: leadId,
+    source: "lead_variable_extraction"
+  });
   let extractedCount = 0;
 
-  for (const result of results) {
+  for (const result of extraction.results) {
     const variable = variables.find((item) => item.id === result.variableId);
     if (!variable) continue;
 
@@ -192,12 +223,12 @@ export async function extractLeadVariables(formData: FormData) {
         variable_id: variable.id,
         lead_id: leadId,
         source_message_id: result.sourceMessageId,
-        mode: "demo",
+        mode: extraction.mode,
         extracted: result.extracted,
         value: result.value,
         confidence: result.confidence,
         reason: result.reason,
-        input,
+        input: extraction.input,
         output: result
       })
       .select("id")
@@ -308,5 +339,47 @@ async function audit(
     entity_table: entityTable,
     entity_id: entityId,
     metadata
+  });
+}
+
+async function logAISuccess(
+  supabase: Awaited<ReturnType<typeof requireUser>>["supabase"],
+  organizationId: string,
+  extraction: Awaited<ReturnType<VariableExtractor["extract"]>>,
+  metadata: { source: string; conversation_id?: string; lead_id?: string },
+) {
+  await supabase.from("ai_logs").insert({
+    organization_id: organizationId,
+    conversation_id: metadata.conversation_id,
+    provider: "openai",
+    model: extraction.model,
+    mode: extraction.mode,
+    input: summarizeAIInput(extraction.input),
+    output: JSON.stringify(extraction.results),
+    status: "success",
+    metadata: usageMetadata(extraction.usage, {
+      source: metadata.source,
+      lead_id: metadata.lead_id,
+      response_id: extraction.responseId
+    })
+  });
+}
+
+async function logAIError(
+  supabase: Awaited<ReturnType<typeof requireUser>>["supabase"],
+  organizationId: string,
+  runtime: ReturnType<typeof getAIRuntimeConfig>,
+  error: unknown,
+  metadata: { source: string; conversation_id?: string; lead_id?: string },
+) {
+  await supabase.from("ai_logs").insert({
+    organization_id: organizationId,
+    conversation_id: metadata.conversation_id,
+    provider: "openai",
+    model: runtime.model,
+    mode: runtime.demoMode ? "demo" : "openai",
+    input: { source: metadata.source, lead_id: metadata.lead_id },
+    status: "error",
+    error_message: error instanceof Error ? error.message : "Variable extraction failed"
   });
 }

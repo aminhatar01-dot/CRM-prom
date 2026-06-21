@@ -7,8 +7,8 @@ import { assistantFormSchema, assistantTestSchema } from "@crm-pro-ai/ai/assista
 import { AIOrchestrator } from "@crm-pro-ai/ai/orchestrator";
 import { requireUser } from "@/lib/auth";
 import { actionErrorCode } from "@/lib/action-errors";
-import { getServerEnv } from "@/lib/env";
 import { buildConversationAIContext, mapAssistant, type AssistantRow } from "@/lib/ai/context";
+import { enforceAIRateLimit, getAIRuntimeConfig, summarizeAIInput, usageMetadata } from "@/lib/ai/runtime";
 import { loadAvailableAITools } from "@/lib/ai/tools";
 import { getActiveOrganization } from "@/lib/organization";
 
@@ -110,7 +110,7 @@ export async function runAssistantTest(formData: FormData) {
 
   if (!assistantRow) redirect(`/assistants/${parsed.data.assistant_id}?error=missing`);
 
-  const env = getServerEnv();
+  const runtime = getAIRuntimeConfig();
   const assistant = mapAssistant(assistantRow);
   const context = await buildConversationAIContext({
     supabase,
@@ -122,12 +122,12 @@ export async function runAssistantTest(formData: FormData) {
   });
   context.availableTools = await loadAvailableAITools(supabase, organization.id);
   const orchestrator = new AIOrchestrator({
-    apiKey: env.OPENAI_API_KEY,
-    model: env.OPENAI_MODEL,
-    demoMode: env.AI_DEMO_MODE
+    ...runtime
   });
 
+  let testId = "";
   try {
+    await enforceAIRateLimit(supabase, organization.id);
     const result = await orchestrator.generateReply(context);
     await supabase.from("ai_logs").insert({
       organization_id: organization.id,
@@ -136,9 +136,14 @@ export async function runAssistantTest(formData: FormData) {
       provider: "openai",
       model: result.model,
       mode: result.mode,
-      input: result.input,
+      input: summarizeAIInput(result.input),
       output: result.output,
-      status: "success"
+      status: "success",
+      metadata: usageMetadata(result.usage, {
+        source: "assistant_test",
+        response_id: result.responseId,
+        context_summary: summarizeAIInput(result.input)
+      })
     });
     const { data: test } = await supabase
       .from("ai_assistant_tests")
@@ -149,12 +154,11 @@ export async function runAssistantTest(formData: FormData) {
         input: parsed.data.input,
         output: result.output,
         status: "success",
-        metadata: { mode: result.mode, model: result.model }
+        metadata: usageMetadata(result.usage, { mode: result.mode, model: result.model })
       })
       .select("id")
       .single<{ id: string }>();
-
-    redirect(`/assistants/${parsed.data.assistant_id}?test=${test?.id ?? ""}`);
+    testId = test?.id ?? "";
   } catch (error) {
     const message = error instanceof Error ? error.message : "AI generation failed";
     await supabase.from("ai_logs").insert({
@@ -162,8 +166,8 @@ export async function runAssistantTest(formData: FormData) {
       assistant_id: parsed.data.assistant_id,
       conversation_id: parsed.data.conversation_id,
       provider: "openai",
-      model: env.OPENAI_MODEL,
-      mode: env.OPENAI_API_KEY ? "openai" : "demo",
+      model: runtime.model,
+      mode: runtime.demoMode ? "demo" : "openai",
       input: { input: parsed.data.input },
       status: "error",
       error_message: message
@@ -171,6 +175,7 @@ export async function runAssistantTest(formData: FormData) {
 
     redirect(`/assistants/${parsed.data.assistant_id}?error=ai`);
   }
+  redirect(`/assistants/${parsed.data.assistant_id}?test=${testId}`);
 }
 
 export async function suggestConversationReply(formData: FormData) {
@@ -203,7 +208,7 @@ export async function suggestConversationReply(formData: FormData) {
   const assistantRow = assistants?.[0];
   if (!assistantRow) redirect(`/inbox?conversation=${parsed.data.conversation_id}&error=no-assistant`);
 
-  const env = getServerEnv();
+  const runtime = getAIRuntimeConfig();
   const assistant = mapAssistant(assistantRow);
   const context = await buildConversationAIContext({
     supabase,
@@ -214,12 +219,12 @@ export async function suggestConversationReply(formData: FormData) {
   });
   context.availableTools = await loadAvailableAITools(supabase, organization.id);
   const orchestrator = new AIOrchestrator({
-    apiKey: env.OPENAI_API_KEY,
-    model: env.OPENAI_MODEL,
-    demoMode: env.AI_DEMO_MODE
+    ...runtime
   });
 
+  let aiLogId = "";
   try {
+    await enforceAIRateLimit(supabase, organization.id);
     const result = await orchestrator.generateReply(context);
     const { data: log } = await supabase
       .from("ai_logs")
@@ -230,19 +235,38 @@ export async function suggestConversationReply(formData: FormData) {
         provider: "openai",
         model: result.model,
         mode: result.mode,
-        input: result.input,
+      input: summarizeAIInput(result.input),
         output: result.output,
         status: "success",
-        metadata: { source: "inbox_suggestion" }
+        metadata: usageMetadata(result.usage, {
+          source: "inbox_suggestion",
+          response_id: result.responseId,
+          context_summary: summarizeAIInput(result.input),
+          human_confirmation_required: true
+        })
       })
       .select("id")
       .single<{ id: string }>();
 
-    revalidatePath("/inbox");
-    redirect(`/inbox?conversation=${parsed.data.conversation_id}&ai_log=${log?.id ?? ""}`);
-  } catch {
+    aiLogId = log?.id ?? "";
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "AI suggestion failed";
+    await supabase.from("ai_logs").insert({
+      organization_id: organization.id,
+      assistant_id: assistantRow.id,
+      conversation_id: parsed.data.conversation_id,
+      provider: "openai",
+      model: runtime.model,
+      mode: runtime.demoMode ? "demo" : "openai",
+      input: summarizeAIInput({ context: context.userInput ?? "conversation" }),
+      status: "error",
+      error_message: message,
+      metadata: { source: "inbox_suggestion", human_confirmation_required: true }
+    });
     redirect(`/inbox?conversation=${parsed.data.conversation_id}&error=ai-suggestion`);
   }
+  revalidatePath("/inbox");
+  redirect(`/inbox?conversation=${parsed.data.conversation_id}&ai_log=${aiLogId}`);
 }
 
 export async function archiveAssistant(formData: FormData) {
