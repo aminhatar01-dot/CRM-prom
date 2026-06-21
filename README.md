@@ -117,6 +117,14 @@ SaaS CRM multi tenant construido con Next.js 15, Supabase y OpenAI.
 - Filtros por responsable, origen y busqueda.
 - E2E autenticado que verifica persistencia despues de recargar.
 
+## FASE 16
+
+- OpenAI Responses API server-side para asistentes.
+- Structured Outputs para Smart Tags y Variables.
+- Contexto CRM con tags, variables y herramientas.
+- Logs con modelo, tokens, errores y confirmacion humana.
+- Modo demo explicito y rate limit por organizacion.
+
 ## Validacion
 
 ```bash
@@ -129,6 +137,7 @@ npm run qa:smoke
 npm run qa:e2e
 npm run qa:functional
 npm run qa:pipeline
+npm run qa:ai:demo
 ```
 
-Consulta [docs/PHASE_15_PIPELINE_KANBAN.md](docs/PHASE_15_PIPELINE_KANBAN.md), [docs/DEPLOY_ASSISTANT.md](docs/DEPLOY_ASSISTANT.md), [docs/DEPLOY_CHECKLIST.md](docs/DEPLOY_CHECKLIST.md), [docs/NEXT_STEPS_FOR_USER.md](docs/NEXT_STEPS_FOR_USER.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATABASE.md](docs/DATABASE.md), [docs/ROADMAP.md](docs/ROADMAP.md), [docs/DEPLOYMENT_VERCEL_SUPABASE.md](docs/DEPLOYMENT_VERCEL_SUPABASE.md), [docs/PRODUCTION_CHECKLIST.md](docs/PRODUCTION_CHECKLIST.md), [docs/PHASE_10_VALIDATION.md](docs/PHASE_10_VALIDATION.md), [docs/AI_ORCHESTRATION.md](docs/AI_ORCHESTRATION.md), [docs/SMART_TAGS.md](docs/SMART_TAGS.md), [docs/VARIABLES.md](docs/VARIABLES.md), [docs/AUTOMATIONS.md](docs/AUTOMATIONS.md), [docs/WEBCHAT.md](docs/WEBCHAT.md), [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md), [docs/CUSTOM_CONNECT.md](docs/CUSTOM_CONNECT.md), [docs/GOOGLE_SHEETS.md](docs/GOOGLE_SHEETS.md), [docs/WHATSAPP_SETUP.md](docs/WHATSAPP_SETUP.md) y [docs/supabase-setup.md](docs/supabase-setup.md).
+Consulta [docs/PHASE_16_REAL_AI.md](docs/PHASE_16_REAL_AI.md), [docs/PHASE_15_PIPELINE_KANBAN.md](docs/PHASE_15_PIPELINE_KANBAN.md), [docs/DEPLOY_ASSISTANT.md](docs/DEPLOY_ASSISTANT.md), [docs/DEPLOY_CHECKLIST.md](docs/DEPLOY_CHECKLIST.md), [docs/NEXT_STEPS_FOR_USER.md](docs/NEXT_STEPS_FOR_USER.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATABASE.md](docs/DATABASE.md), [docs/ROADMAP.md](docs/ROADMAP.md), [docs/DEPLOYMENT_VERCEL_SUPABASE.md](docs/DEPLOYMENT_VERCEL_SUPABASE.md), [docs/PRODUCTION_CHECKLIST.md](docs/PRODUCTION_CHECKLIST.md), [docs/PHASE_10_VALIDATION.md](docs/PHASE_10_VALIDATION.md), [docs/AI_ORCHESTRATION.md](docs/AI_ORCHESTRATION.md), [docs/SMART_TAGS.md](docs/SMART_TAGS.md), [docs/VARIABLES.md](docs/VARIABLES.md), [docs/AUTOMATIONS.md](docs/AUTOMATIONS.md), [docs/WEBCHAT.md](docs/WEBCHAT.md), [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md), [docs/CUSTOM_CONNECT.md](docs/CUSTOM_CONNECT.md), [docs/GOOGLE_SHEETS.md](docs/GOOGLE_SHEETS.md), [docs/WHATSAPP_SETUP.md](docs/WHATSAPP_SETUP.md) y [docs/supabase-setup.md](docs/supabase-setup.md).

@@ -6,11 +6,11 @@ FASE 4 agrega asistentes IA y `AIOrchestrator` para generar sugerencias con cont
 
 ```bash
 OPENAI_API_KEY=
-OPENAI_MODEL=gpt-5.5
+OPENAI_MODEL=gpt-5.2
 AI_DEMO_MODE=true
 ```
 
-Si `OPENAI_API_KEY` no existe, el orquestador usa modo demo. Si `AI_DEMO_MODE=true`, fuerza demo aunque exista API key.
+`AI_DEMO_MODE=true` fuerza modo demo y no llama a OpenAI. Con `AI_DEMO_MODE=false`, `OPENAI_API_KEY` es obligatoria.
 
 ## Servicio
 
@@ -26,8 +26,12 @@ Si `OPENAI_API_KEY` no existe, el orquestador usa modo demo. Si `AI_DEMO_MODE=tr
 - ultimos mensajes
 - entrada manual del operador
 - herramientas externas activas disponibles
+- Smart Tags asignados
+- Variables Inteligentes extraidas
 
 Luego llama a OpenAI Responses API desde servidor. La salida siempre es una sugerencia para revision humana.
+
+Smart Tags y Variables usan Structured Outputs y validacion local antes de persistir resultados.
 
 ## Herramientas externas
 

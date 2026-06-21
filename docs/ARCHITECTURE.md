@@ -52,7 +52,7 @@ La fase 4 agrega asistentes IA:
 - `ai_assistant_tests` para pruebas manuales.
 - Sugerencias en Inbox sin envio automatico.
 
-OpenAI se llama desde servidor. Si no hay `OPENAI_API_KEY`, el sistema usa modo demo.
+OpenAI se llama desde servidor. El modo demo solo se habilita explicitamente con `AI_DEMO_MODE=true`; en modo real la API key es obligatoria.
 
 ## FASE 5
 
