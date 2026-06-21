@@ -16,6 +16,8 @@
     "app:check": "node scripts/deploy-check.mjs app --build",
     "qa:smoke": "playwright test --config apps/web/playwright.config.ts --grep @smoke",
     "qa:e2e": "vitest run apps/web/tests/qa/mvp-full-flow.test.ts && playwright test --config apps/web/playwright.config.ts",
+    "qa:functional": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/phase14-functional-local.ps1",
+    "qa:functional:remote": "playwright test --config apps/web/phase14.playwright.config.ts",
     "db:push": "npx supabase db push",
     "db:seed": "npx supabase db reset --local",
     "db:seed:remote": "npx supabase db push --linked --include-seed --yes",
