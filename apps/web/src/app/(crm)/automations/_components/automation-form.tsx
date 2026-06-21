@@ -1,8 +1,8 @@
 import { automationActionTypes, automationRuleStatuses, automationTriggerTypes } from "@crm-pro-ai/automation/rules";
-import { Button } from "@crm-pro-ai/ui/button";
 import { Input } from "@crm-pro-ai/ui/input";
 import { Label } from "@crm-pro-ai/ui/label";
 import { createAutomationRule, updateAutomationRule } from "@/app/actions/automations";
+import { SubmitButton } from "../../_components/submit-button";
 
 type AutomationFormRule = {
   id: string;
@@ -115,7 +115,7 @@ export function AutomationForm({ rule }: { rule?: AutomationFormRule }) {
         />
         <p className="text-xs text-muted-foreground">Tipos disponibles: {automationActionTypes.join(", ")}.</p>
       </div>
-      <Button type="submit">{rule ? "Guardar cambios" : "Crear automatizacion"}</Button>
+      <SubmitButton>{rule ? "Guardar cambios" : "Crear automatizacion"}</SubmitButton>
     </form>
   );
 }

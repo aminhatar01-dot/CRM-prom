@@ -1,8 +1,8 @@
 import { variableTypes } from "@crm-pro-ai/ai/variables";
-import { Button } from "@crm-pro-ai/ui/button";
 import { Input } from "@crm-pro-ai/ui/input";
 import { Label } from "@crm-pro-ai/ui/label";
 import { createVariable, updateVariable } from "@/app/actions/variables";
+import { SubmitButton } from "../../_components/submit-button";
 
 type Variable = {
   id: string;
@@ -71,7 +71,7 @@ export function VariableForm({ variable }: { variable?: Variable }) {
           Requerida
         </label>
       </div>
-      <Button type="submit">{variable ? "Guardar cambios" : "Crear variable"}</Button>
+      <SubmitButton>{variable ? "Guardar cambios" : "Crear variable"}</SubmitButton>
     </form>
   );
 }

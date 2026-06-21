@@ -1,8 +1,8 @@
 import { leadStatuses } from "@crm-pro-ai/database/crm";
-import { Button } from "@crm-pro-ai/ui/button";
 import { Input } from "@crm-pro-ai/ui/input";
 import { Label } from "@crm-pro-ai/ui/label";
 import { createLead, updateLead } from "@/app/actions/crm";
+import { SubmitButton } from "../../_components/submit-button";
 
 type Member = {
   user_id: string;
@@ -78,7 +78,7 @@ export function LeadForm({ lead, members }: { lead?: Lead; members: Member[] }) 
           className="min-h-28 w-full rounded-md border bg-background px-3 py-2 text-sm"
         />
       </div>
-      <Button type="submit">{lead ? "Guardar cambios" : "Crear lead"}</Button>
+      <SubmitButton>{lead ? "Guardar cambios" : "Crear lead"}</SubmitButton>
     </form>
   );
 }

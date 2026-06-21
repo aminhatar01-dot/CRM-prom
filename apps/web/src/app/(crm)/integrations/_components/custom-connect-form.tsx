@@ -1,8 +1,8 @@
 import { httpMethods } from "@crm-pro-ai/integrations/tools";
-import { Button } from "@crm-pro-ai/ui/button";
 import { Input } from "@crm-pro-ai/ui/input";
 import { Label } from "@crm-pro-ai/ui/label";
 import { createCustomConnect, updateCustomConnect } from "@/app/actions/integrations";
+import { SubmitButton } from "../../_components/submit-button";
 
 type CustomConnectTool = {
   id: string;
@@ -62,7 +62,7 @@ export function CustomConnectForm({ tool }: { tool?: CustomConnectTool }) {
         <input name="active" type="checkbox" defaultChecked={tool?.active ?? false} />
         Activa
       </label>
-      <Button type="submit">{tool ? "Guardar cambios" : "Crear Custom Connect"}</Button>
+      <SubmitButton>{tool ? "Guardar cambios" : "Crear Custom Connect"}</SubmitButton>
     </form>
   );
 }

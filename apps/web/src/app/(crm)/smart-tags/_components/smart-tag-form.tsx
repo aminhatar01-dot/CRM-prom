@@ -1,7 +1,7 @@
-import { Button } from "@crm-pro-ai/ui/button";
 import { Input } from "@crm-pro-ai/ui/input";
 import { Label } from "@crm-pro-ai/ui/label";
 import { createSmartTag, updateSmartTag } from "@/app/actions/smart-tags";
+import { SubmitButton } from "../../_components/submit-button";
 
 type SmartTag = {
   id: string;
@@ -63,7 +63,7 @@ export function SmartTagForm({ tag }: { tag?: SmartTag }) {
           Notificar equipo
         </label>
       </div>
-      <Button type="submit">{tag ? "Guardar cambios" : "Crear Smart Tag"}</Button>
+      <SubmitButton>{tag ? "Guardar cambios" : "Crear Smart Tag"}</SubmitButton>
     </form>
   );
 }

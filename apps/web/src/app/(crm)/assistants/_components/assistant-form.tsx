@@ -1,8 +1,8 @@
 import { assistantTones } from "@crm-pro-ai/ai/assistant";
-import { Button } from "@crm-pro-ai/ui/button";
 import { Input } from "@crm-pro-ai/ui/input";
 import { Label } from "@crm-pro-ai/ui/label";
 import { createAssistant, updateAssistant } from "@/app/actions/ai";
+import { SubmitButton } from "../../_components/submit-button";
 
 type Assistant = {
   id: string;
@@ -88,7 +88,7 @@ export function AssistantForm({ assistant }: { assistant?: Assistant }) {
         <input name="active" type="checkbox" defaultChecked={assistant?.active ?? true} />
         Asistente activo
       </label>
-      <Button type="submit">{assistant ? "Guardar cambios" : "Crear asistente"}</Button>
+      <SubmitButton>{assistant ? "Guardar cambios" : "Crear asistente"}</SubmitButton>
     </form>
   );
 }

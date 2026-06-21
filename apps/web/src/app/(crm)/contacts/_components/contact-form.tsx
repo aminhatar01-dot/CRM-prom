@@ -1,7 +1,7 @@
-import { Button } from "@crm-pro-ai/ui/button";
 import { Input } from "@crm-pro-ai/ui/input";
 import { Label } from "@crm-pro-ai/ui/label";
 import { createContact, updateContact } from "@/app/actions/crm";
+import { SubmitButton } from "../../_components/submit-button";
 
 type Member = {
   user_id: string;
@@ -59,7 +59,7 @@ export function ContactForm({ contact, members }: { contact?: Contact; members: 
           className="min-h-28 w-full rounded-md border bg-background px-3 py-2 text-sm"
         />
       </div>
-      <Button type="submit">{contact ? "Guardar cambios" : "Crear contacto"}</Button>
+      <SubmitButton>{contact ? "Guardar cambios" : "Crear contacto"}</SubmitButton>
     </form>
   );
 }
