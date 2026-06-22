@@ -18,6 +18,7 @@ const serverEnvSchema = publicEnvSchema.extend({
   WHATSAPP_GRAPH_API_VERSION: z.string().min(1).default("v23.0"),
   OPENAI_API_KEY: z.string().min(1).optional(),
   OPENAI_MODEL: z.string().min(1).default("gpt-5.2"),
+  OPENAI_EMBEDDING_MODEL: z.string().min(1).default("text-embedding-3-small"),
   CRON_SECRET: z.string().min(1).optional(),
   AI_DEMO_MODE: z
     .enum(["true", "false"])
@@ -49,6 +50,7 @@ export function getServerEnv() {
     WHATSAPP_GRAPH_API_VERSION: process.env.WHATSAPP_GRAPH_API_VERSION,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     OPENAI_MODEL: process.env.OPENAI_MODEL,
+    OPENAI_EMBEDDING_MODEL: process.env.OPENAI_EMBEDDING_MODEL,
     CRON_SECRET: process.env.CRON_SECRET,
     AI_DEMO_MODE: process.env.AI_DEMO_MODE
   });
@@ -64,6 +66,7 @@ export const optionalProductionEnvVars = [
   "SUPABASE_SERVICE_ROLE_KEY",
   "OPENAI_API_KEY",
   "OPENAI_MODEL",
+  "OPENAI_EMBEDDING_MODEL",
   "AI_DEMO_MODE",
   "CRON_SECRET",
   "WHATSAPP_VERIFY_TOKEN",
@@ -92,6 +95,7 @@ export function validateServerEnv(env: NodeJS.ProcessEnv = process.env) {
     WHATSAPP_GRAPH_API_VERSION: env.WHATSAPP_GRAPH_API_VERSION,
     OPENAI_API_KEY: env.OPENAI_API_KEY,
     OPENAI_MODEL: env.OPENAI_MODEL,
+    OPENAI_EMBEDDING_MODEL: env.OPENAI_EMBEDDING_MODEL,
     CRON_SECRET: env.CRON_SECRET,
     AI_DEMO_MODE: env.AI_DEMO_MODE
   });

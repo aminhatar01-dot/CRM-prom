@@ -7,6 +7,8 @@
     "./assistant": "./src/assistant.ts",
     "./orchestrator": "./src/orchestrator.ts",
     "./openai-client": "./src/openai-client.ts",
+    "./embedding-client": "./src/embedding-client.ts",
+    "./knowledge": "./src/knowledge.ts",
     "./smart-tags": "./src/smart-tags.ts",
     "./smart-tag-classifier": "./src/smart-tag-classifier.ts",
     "./variables": "./src/variables.ts",
