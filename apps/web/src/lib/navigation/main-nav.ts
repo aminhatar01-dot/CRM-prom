@@ -1,5 +1,6 @@
 import {
   Bot,
+  BookOpen,
   Braces,
   Columns3,
   LayoutDashboard,
@@ -22,6 +23,7 @@ export const mainNavigationItems = [
   { href: "/assistants", label: "Asistentes", icon: Sparkles, adminOnly: true },
   { href: "/smart-tags", label: "Smart Tags", icon: Tags, adminOnly: true },
   { href: "/variables", label: "Variables", icon: Braces, adminOnly: true },
+  { href: "/knowledge", label: "Base de conocimiento", icon: BookOpen, adminOnly: true },
   { href: "/automations", label: "Automatizaciones", icon: Workflow, adminOnly: true },
   { href: "/integrations", label: "Integraciones", icon: Plug, adminOnly: true },
   { href: "/settings/channels/webchat", label: "WebChat", icon: MessageSquareText, adminOnly: true },

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AIContext, AIMessageContext, AssistantConfig } from "@crm-pro-ai/ai/assistant";
+import { buildKnowledgeQuery, searchKnowledge } from "@/lib/knowledge/service";
 
 export type AssistantRow = {
   id: string;
@@ -83,12 +84,17 @@ export async function buildConversationAIContext({
   userInput?: string;
 }): Promise<AIContext> {
   if (!conversationId) {
-    return {
+    const context: AIContext = {
       organizationName,
       assistant,
       messages: [],
       userInput
     };
+    context.knowledge = await safeKnowledgeSearch(
+      organizationId,
+      buildKnowledgeQuery({ userInput, messages: [] }),
+    );
+    return context;
   }
 
   const [{ data: conversation }, { data: messages }] = await Promise.all([
@@ -184,7 +190,7 @@ export async function buildConversationAIContext({
         Boolean(tag),
     );
 
-  return {
+  const context: AIContext = {
     organizationName,
     assistant,
     conversation: conversation
@@ -201,4 +207,22 @@ export async function buildConversationAIContext({
     variables: Array.from(variablesByKey.values()),
     userInput
   };
+  context.knowledge = await safeKnowledgeSearch(
+    organizationId,
+    buildKnowledgeQuery({
+      userInput,
+      messages: context.messages,
+      person: context.person
+    }),
+  );
+  return context;
+}
+
+async function safeKnowledgeSearch(organizationId: string, query: string) {
+  if (!query.trim()) return [];
+  try {
+    return await searchKnowledge({ organizationId, query });
+  } catch {
+    return [];
+  }
 }

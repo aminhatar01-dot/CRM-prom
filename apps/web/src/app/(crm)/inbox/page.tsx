@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Archive, Bell, Bot, Braces, Search, SendHorizontal, Sparkles, Tags } from "lucide-react";
+import { Archive, Bell, BookOpen, Bot, Braces, Search, SendHorizontal, Sparkles, Tags } from "lucide-react";
 import {
   conversationAiStatuses,
   conversationChannels,
@@ -187,10 +187,16 @@ export default async function InboxPage({
   const { data: aiSuggestion } = params.ai_log
     ? await supabase
         .from("ai_logs")
-        .select("id, output, mode, model")
+        .select("id, output, mode, model, metadata")
         .eq("id", params.ai_log)
         .eq("organization_id", organization.id)
-        .maybeSingle<{ id: string; output: string | null; mode: string; model: string | null }>()
+        .maybeSingle<{
+          id: string;
+          output: string | null;
+          mode: string;
+          model: string | null;
+          metadata: Record<string, unknown> | null;
+        }>()
     : { data: null };
   const { data: selectedTasks } = selected
     ? await supabase
@@ -352,6 +358,29 @@ export default async function InboxPage({
                   <div className="mt-3 rounded-md border bg-muted/60 p-3 text-sm">
                     <p className="mb-1 text-xs font-medium text-muted-foreground">Borrador IA para revision humana</p>
                     <p>{aiSuggestion.output}</p>
+                    {knowledgeSources(aiSuggestion.metadata).length > 0 ? (
+                      <div className="mt-3 border-t pt-3">
+                        <p className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                          <BookOpen className="size-3" />
+                          Fuentes internas usadas
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {knowledgeSources(aiSuggestion.metadata).map((source) => (
+                            <Link
+                              key={`${source.documentId}-${source.title}`}
+                              href={`/knowledge/${source.documentId}`}
+                              className="rounded-md border bg-background px-2 py-1 text-xs hover:bg-muted"
+                            >
+                              {source.title} · {Math.round(source.score * 100)}%
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="mt-3 border-t pt-3 text-xs text-amber-700">
+                        No se encontro informacion interna suficiente. Revisa el borrador antes de enviarlo.
+                      </p>
+                    )}
                   </div>
                 ) : null}
                 {(automationDrafts ?? []).map((draft) => (
@@ -590,4 +619,17 @@ function conversationPhone(conversation: ConversationRow) {
 function formatVariableValue(value: unknown) {
   if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value);
   return JSON.stringify(value);
+}
+
+function knowledgeSources(metadata: Record<string, unknown> | null) {
+  const sources = metadata?.knowledge_sources;
+  if (!Array.isArray(sources)) return [];
+  return sources.filter(
+    (source): source is { documentId: string; title: string; score: number } =>
+      typeof source === "object" &&
+      source !== null &&
+      typeof (source as Record<string, unknown>).documentId === "string" &&
+      typeof (source as Record<string, unknown>).title === "string" &&
+      typeof (source as Record<string, unknown>).score === "number",
+  );
 }

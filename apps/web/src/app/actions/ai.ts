@@ -142,7 +142,9 @@ export async function runAssistantTest(formData: FormData) {
       metadata: usageMetadata(result.usage, {
         source: "assistant_test",
         response_id: result.responseId,
-        context_summary: summarizeAIInput(result.input)
+        context_summary: summarizeAIInput(result.input),
+        knowledge_sources: result.sources,
+        knowledge_sufficient: result.knowledgeSufficient
       })
     });
     const { data: test } = await supabase
@@ -154,7 +156,12 @@ export async function runAssistantTest(formData: FormData) {
         input: parsed.data.input,
         output: result.output,
         status: "success",
-        metadata: usageMetadata(result.usage, { mode: result.mode, model: result.model })
+        metadata: usageMetadata(result.usage, {
+          mode: result.mode,
+          model: result.model,
+          knowledge_sources: result.sources,
+          knowledge_sufficient: result.knowledgeSufficient
+        })
       })
       .select("id")
       .single<{ id: string }>();
@@ -242,7 +249,9 @@ export async function suggestConversationReply(formData: FormData) {
           source: "inbox_suggestion",
           response_id: result.responseId,
           context_summary: summarizeAIInput(result.input),
-          human_confirmation_required: true
+          human_confirmation_required: true,
+          knowledge_sources: result.sources,
+          knowledge_sufficient: result.knowledgeSufficient
         })
       })
       .select("id")

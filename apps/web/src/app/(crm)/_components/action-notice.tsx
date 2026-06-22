@@ -22,13 +22,15 @@ const errorMessages: Record<string, string> = {
   "ai-variables": "No pudimos extraer variables con IA.",
   "no-assistant": "No hay un asistente activo para esta conversacion.",
   "no-smart-tags": "No hay Smart Tags activos para analizar.",
-  "no-variables": "No hay Variables Inteligentes activas para extraer."
+  "no-variables": "No hay Variables Inteligentes activas para extraer.",
+  "knowledge-indexing": "El documento se guardo, pero no pudo indexarse. Revisa el estado y vuelve a intentar."
 };
 
 const successMessages: Record<string, string> = {
   archived: "Registro archivado correctamente.",
   created: "Registro creado correctamente.",
-  updated: "Cambios guardados correctamente."
+  updated: "Cambios guardados correctamente.",
+  indexed: "Documento indexado correctamente."
 };
 
 export function ActionNotice() {

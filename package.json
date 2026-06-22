@@ -20,6 +20,7 @@
     "qa:functional:remote": "playwright test --config apps/web/phase14.playwright.config.ts",
     "qa:pipeline": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/phase14-functional-local.ps1 -PlaywrightConfig apps/web/phase15.playwright.config.ts",
     "qa:ai:demo": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/phase14-functional-local.ps1 -PlaywrightConfig apps/web/phase16.playwright.config.ts",
+    "qa:knowledge:remote": "node scripts/smoke-phase19-knowledge.mjs",
     "qa:whatsapp:signup": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/phase14-functional-local.ps1 -PlaywrightConfig apps/web/phase17.playwright.config.ts",
     "db:push": "npx supabase db push",
     "db:seed": "npx supabase db reset --local",

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Archive, Pencil, Play } from "lucide-react";
+import { Archive, BookOpen, Pencil, Play } from "lucide-react";
 import { Button } from "@crm-pro-ai/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@crm-pro-ai/ui/card";
 import { Input } from "@crm-pro-ai/ui/input";
@@ -27,6 +27,7 @@ type AssistantTest = {
   output: string | null;
   status: string;
   created_at: string;
+  metadata: Record<string, unknown> | null;
 };
 
 type ConversationOption = {
@@ -58,7 +59,7 @@ export default async function AssistantDetailPage({
       .single<AssistantDetail>(),
     supabase
       .from("ai_assistant_tests")
-      .select("id, input, output, status, created_at")
+      .select("id, input, output, status, created_at, metadata")
       .eq("assistant_id", id)
       .eq("organization_id", organization.id)
       .order("created_at", { ascending: false })
@@ -159,6 +160,14 @@ export default async function AssistantDetailPage({
             <div key={test.id} className="rounded-md border p-3 text-sm">
               <p className="font-medium">{test.input}</p>
               <p className="mt-2 text-muted-foreground">{test.output ?? "Sin salida"}</p>
+              {knowledgeSources(test.metadata).length > 0 ? (
+                <p className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
+                  <BookOpen className="size-3" />
+                  {knowledgeSources(test.metadata).map((source) => source.title).join(", ")}
+                </p>
+              ) : (
+                <p className="mt-2 text-xs text-amber-700">Sin informacion interna suficiente para esta prueba.</p>
+              )}
             </div>
           ))}
           {tests?.length === 0 ? <p className="text-sm text-muted-foreground">Todavia no hay pruebas.</p> : null}
@@ -180,4 +189,17 @@ function Info({ label, value }: { label: string; value: string }) {
 function conversationName(conversation: ConversationOption) {
   const person = conversation.contacts ?? conversation.leads;
   return [person?.first_name, person?.last_name].filter(Boolean).join(" ") || "Conversacion";
+}
+
+function knowledgeSources(metadata: Record<string, unknown> | null) {
+  const sources = metadata?.knowledge_sources;
+  if (!Array.isArray(sources)) return [];
+  return sources.filter(
+    (source): source is { documentId: string; title: string; score: number } =>
+      typeof source === "object" &&
+      source !== null &&
+      typeof (source as Record<string, unknown>).documentId === "string" &&
+      typeof (source as Record<string, unknown>).title === "string" &&
+      typeof (source as Record<string, unknown>).score === "number",
+  );
 }

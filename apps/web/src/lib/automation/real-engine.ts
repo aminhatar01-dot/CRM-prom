@@ -360,7 +360,9 @@ async function generateDraft(
       source: "automation_draft",
       rule_id: rule.id,
       run_id: run.id,
-      human_confirmation_required: !rule.auto_send
+      human_confirmation_required: !rule.auto_send,
+      knowledge_sources: result.sources,
+      knowledge_sufficient: result.knowledgeSufficient
     })
   }).select("id").single<{ id: string }>();
 
@@ -376,7 +378,11 @@ async function generateDraft(
     auto_send_requested: rule.auto_send,
     model: result.model,
     mode: result.mode,
-    token_usage: usageMetadata(result.usage).usage
+    token_usage: {
+      ...usageMetadata(result.usage).usage,
+      knowledge_sources: result.sources,
+      knowledge_sufficient: result.knowledgeSufficient
+    }
   }).select("id").single<{ id: string }>();
   if (error) throw error;
 

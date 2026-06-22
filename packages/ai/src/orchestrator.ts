@@ -15,6 +15,13 @@ export type AIOrchestratorResult = {
   input: Record<string, unknown>;
   usage: AIUsage;
   responseId?: string;
+  sources: Array<{
+    documentId: string;
+    title: string;
+    category: string;
+    score: number;
+  }>;
+  knowledgeSufficient: boolean;
 };
 
 export class AIOrchestrator {
@@ -41,6 +48,12 @@ export class AIOrchestrator {
     const variables = (context.variables ?? [])
       .map((variable) => `- ${variable.key} (${variable.name}) = ${JSON.stringify(variable.value)}; confidence=${variable.confidence ?? "n/a"}`)
       .join("\n");
+    const knowledge = (context.knowledge ?? [])
+      .map(
+        (source, index) =>
+          `[Fuente ${index + 1}] ${source.title} (${source.category}, similitud=${source.score.toFixed(3)}):\n${sanitizeAIText(source.content, 2_500)}`,
+      )
+      .join("\n\n");
 
     return [
       `Organizacion: ${context.organizationName}`,
@@ -56,6 +69,7 @@ export class AIOrchestrator {
       `Reglas: ${assistant.rules ?? "Sin reglas adicionales."}`,
       `Smart Tags actuales:\n${smartTags || "Sin Smart Tags asignados."}`,
       `Variables conocidas:\n${variables || "Sin variables extraidas."}`,
+      `Base de conocimiento interna:\n${knowledge || "Sin informacion interna relevante para esta consulta."}`,
       `Herramientas disponibles (solo listar, no ejecutar automaticamente):\n${tools || "Sin herramientas externas disponibles."}`,
       `Historial reciente:\n${history || "Sin mensajes previos."}`,
       `Entrada del operador: ${context.userInput ?? "Sugerir la proxima respuesta."}`
@@ -81,7 +95,14 @@ export class AIOrchestrator {
       model: result.model,
       input,
       usage: result.usage,
-      responseId: result.responseId
+      responseId: result.responseId,
+      sources: (context.knowledge ?? []).map(({ documentId, title, category, score }) => ({
+        documentId,
+        title,
+        category,
+        score
+      })),
+      knowledgeSufficient: (context.knowledge ?? []).length > 0
     };
   }
 
@@ -89,6 +110,10 @@ export class AIOrchestrator {
     return [
       assistant.prompt,
       "Usa solo el contexto CRM entregado.",
+      "Para datos propios del negocio, usa exclusivamente la Base de conocimiento interna.",
+      "Si la Base de conocimiento no contiene una respuesta suficiente, expresa incertidumbre y propone validarlo con una persona.",
+      "No inventes productos, precios, politicas, horarios, disponibilidad ni condiciones de la empresa.",
+      "No menciones identificadores internos ni puntajes de similitud al cliente.",
       "No inventes datos de presupuesto, disponibilidad ni condiciones.",
       "Redacta una sugerencia lista para que un humano la revise antes de enviar.",
       "No digas que eres una IA salvo que el prompt del asistente lo pida."
@@ -98,8 +123,11 @@ export class AIOrchestrator {
   private demoReply(context: AIContext) {
     const personName = context.person?.name ?? "ahi";
     const lastInbound = [...context.messages].reverse().find((message) => message.direction === "inbound");
-    const anchor = lastInbound ? `Vi tu mensaje sobre "${lastInbound.body}".` : "Gracias por escribirnos.";
+    const source = context.knowledge?.[0];
+    const anchor = source
+      ? `Segun nuestra informacion interna: ${sanitizeAIText(source.content, 260)}`
+      : "No encontre informacion interna suficiente para confirmar ese dato. Puedo pedirle a una persona del equipo que lo valide.";
 
-    return `Hola ${personName}, ${anchor} Te comparto una respuesta preliminar y puedo ayudarte a avanzar con el siguiente paso.`;
+    return `Hola ${personName}, ${lastInbound ? `vi tu mensaje sobre "${sanitizeAIText(lastInbound.body, 180)}". ` : ""}${anchor}`;
   }
 }

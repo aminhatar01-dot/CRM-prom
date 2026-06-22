@@ -69,5 +69,12 @@ export type AIContext = {
   }>;
   smartTags?: Array<{ name: string; color?: string; description?: string | null }>;
   variables?: Array<{ key: string; name: string; value: unknown; confidence?: number | null }>;
+  knowledge?: Array<{
+    documentId: string;
+    title: string;
+    category: string;
+    content: string;
+    score: number;
+  }>;
   userInput?: string;
 };
