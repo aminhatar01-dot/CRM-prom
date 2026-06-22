@@ -76,6 +76,40 @@ describe("AIOrchestrator", () => {
     expect(built).toContain("no ejecutar automaticamente");
   });
 
+  it("adds relevant RAG context and exposes internal sources separately", async () => {
+    const orchestrator = new AIOrchestrator({ demoMode: true });
+    const ragContext: AIContext = {
+      ...context,
+      knowledge: [
+        {
+          documentId: "00000000-0000-4000-8000-000000000701",
+          title: "Planes comerciales",
+          category: "ventas",
+          content: "El plan inicial incluye cinco usuarios.",
+          score: 0.88
+        }
+      ]
+    };
+
+    expect(orchestrator.buildContext(ragContext)).toContain("El plan inicial incluye cinco usuarios.");
+    const result = await orchestrator.generateReply(ragContext);
+    expect(result.knowledgeSufficient).toBe(true);
+    expect(result.output).toContain("cinco usuarios");
+    expect(result.sources).toEqual([
+      expect.objectContaining({ title: "Planes comerciales", score: 0.88 })
+    ]);
+  });
+
+  it("marks replies without RAG evidence as insufficient", async () => {
+    const orchestrator = new AIOrchestrator({ demoMode: true });
+    const result = await orchestrator.generateReply(context);
+
+    expect(result.knowledgeSufficient).toBe(false);
+    expect(result.sources).toEqual([]);
+    expect(result.output).toContain("No encontre informacion interna suficiente");
+    expect(orchestrator.buildContext(context)).toContain("Sin informacion interna relevante");
+  });
+
   it("falls back to demo mode without an API key", async () => {
     const orchestrator = new AIOrchestrator();
     const result = await orchestrator.generateReply(context);

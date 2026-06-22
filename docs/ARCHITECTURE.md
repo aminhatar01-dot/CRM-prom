@@ -153,3 +153,18 @@ QA integral agrega:
 - contratos de seeds, scripts, docs y RLS
 
 La suite no contacta OpenAI, WhatsApp ni Supabase remoto.
+
+## FASE 19
+
+La base de conocimiento agrega:
+
+- `knowledge_documents` como superficie RLS visible para owner/admin;
+- `knowledge_chunks` como almacenamiento server-only de texto y vectores;
+- `OpenAIEmbeddingClient` con modo OpenAI y fallback demo determinista;
+- `match_knowledge_chunks` como RPC semantico restringido a service role;
+- recuperacion RAG centralizada en `buildConversationAIContext`;
+- fuentes persistidas en metadata de `ai_logs` y visibles en Inbox.
+
+El aislamiento se aplica dos veces: trigger de integridad entre documento y
+chunk, y filtro obligatorio por `organization_id` dentro del RPC. Los
+componentes cliente nunca reciben embeddings.

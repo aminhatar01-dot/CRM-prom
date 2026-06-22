@@ -2,6 +2,15 @@
 
 SaaS CRM multi tenant construido con Next.js 15, Supabase y OpenAI.
 
+## FASE 19
+
+- Base de conocimiento por organizacion en `/knowledge`.
+- Documentos manuales con CRUD, archivo y reindexacion.
+- Chunks y embeddings server-side con `text-embedding-3-small`.
+- Busqueda semantica tenant-safe mediante `pgvector`.
+- Contexto RAG, fuentes internas y aviso de evidencia insuficiente en IA.
+- Preparacion de esquema para PDF, DOCX y TXT.
+
 ## FASE 1
 
 - Monorepo con `apps/web` y paquetes compartidos.

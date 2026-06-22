@@ -10,6 +10,7 @@ describe("main navigation smoke test", () => {
         "/pipeline",
         "/inbox",
         "/assistants",
+        "/knowledge",
         "/integrations",
         "/settings/system-status"
       ]),
