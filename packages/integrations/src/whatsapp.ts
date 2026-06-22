@@ -30,3 +30,15 @@ export const whatsappSendMediaSchema = z.object({
 export type WhatsAppInboundMessage = z.infer<typeof whatsappInboundMessageSchema>;
 export type WhatsAppSendTextInput = z.infer<typeof whatsappSendTextSchema>;
 export type WhatsAppSendMediaInput = z.infer<typeof whatsappSendMediaSchema>;
+
+export function normalizeWhatsAppRecipient(value: string) {
+  const digits = value.replace(/\D/g, "");
+
+  // Meta reports Argentine mobile wa_id values as 549..., but Cloud API
+  // accepts test/recipient-list destinations in E.164 form without the 9.
+  if (/^549\d{10}$/.test(digits)) {
+    return `54${digits.slice(3)}`;
+  }
+
+  return digits;
+}

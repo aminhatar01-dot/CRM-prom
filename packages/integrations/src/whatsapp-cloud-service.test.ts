@@ -45,8 +45,32 @@ describe("WhatsAppCloudService", () => {
         method: "POST",
         headers: expect.objectContaining({
           Authorization: "Bearer token"
-        })
+        }),
+        body: expect.stringContaining('"to":"541100000000"')
       }),
     );
+  });
+
+  it("normalizes Argentine mobile wa_id recipients for Cloud API sends", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        messaging_product: "whatsapp",
+        messages: [{ id: "wamid.argentina" }]
+      })
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const service = new WhatsAppCloudService({
+      accessToken: "token",
+      phoneNumberId: "123"
+    });
+
+    await service.sendText({ to: "5493416857281", body: "Hola" });
+
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(JSON.parse(String(request.body))).toMatchObject({
+      to: "543416857281"
+    });
   });
 });

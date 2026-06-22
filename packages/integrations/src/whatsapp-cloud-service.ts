@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { z } from "zod";
 import {
+  normalizeWhatsAppRecipient,
   whatsappSendMediaSchema,
   whatsappSendTextSchema,
   type WhatsAppSendMediaInput,
@@ -52,7 +53,7 @@ export class WhatsAppCloudService {
     return this.postMessage({
       messaging_product: "whatsapp",
       recipient_type: "individual",
-      to: parsed.to,
+      to: normalizeWhatsAppRecipient(parsed.to),
       type: "text",
       text: {
         preview_url: false,
@@ -66,7 +67,7 @@ export class WhatsAppCloudService {
     return this.postMessage({
       messaging_product: "whatsapp",
       recipient_type: "individual",
-      to: parsed.to,
+      to: normalizeWhatsAppRecipient(parsed.to),
       type: parsed.type,
       [parsed.type]: {
         id: parsed.mediaId,
