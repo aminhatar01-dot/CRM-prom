@@ -9,3 +9,5 @@ test-results
 *.tsbuildinfo
 supabase/.branches
 supabase/.temp
+
+.vercel
