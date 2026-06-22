@@ -71,6 +71,26 @@ export function RealtimeRefresh({ organizationId }: { organizationId: string }) 
         },
         () => router.refresh(),
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "automation_drafts",
+          filter: `organization_id=eq.${organizationId}`
+        },
+        () => router.refresh(),
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "automation_runs",
+          filter: `organization_id=eq.${organizationId}`
+        },
+        () => router.refresh(),
+      )
       .subscribe();
 
     return () => {

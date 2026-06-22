@@ -15,6 +15,7 @@ import {
   updateMessage
 } from "@/app/actions/crm";
 import { createManualFollowUp } from "@/app/actions/automations";
+import { approveAutomationDraft, discardAutomationDraft } from "@/app/actions/automations";
 import { suggestConversationReply } from "@/app/actions/ai";
 import { analyzeConversationSmartTags, assignSmartTag } from "@/app/actions/smart-tags";
 import { extractConversationVariables } from "@/app/actions/variables";
@@ -68,6 +69,25 @@ type NotificationRow = {
   title: string;
   body: string | null;
   created_at: string;
+};
+
+type AutomationDraftRow = {
+  id: string;
+  body: string;
+  status: string;
+  auto_send_requested: boolean;
+  model: string | null;
+  created_at: string;
+  automation_rules: { name: string } | null;
+};
+
+type AutomationRunRow = {
+  id: string;
+  status: string;
+  trigger_type: string;
+  error_message: string | null;
+  created_at: string;
+  automation_rules: { name: string } | null;
 };
 
 export default async function InboxPage({
@@ -193,6 +213,27 @@ export default async function InboxPage({
         .limit(5)
         .returns<NotificationRow[]>()
     : { data: [] };
+  const { data: automationDrafts } = selected
+    ? await supabase
+        .from("automation_drafts")
+        .select("id, body, status, auto_send_requested, model, created_at, automation_rules(name)")
+        .eq("organization_id", organization.id)
+        .eq("conversation_id", selected.id)
+        .in("status", ["pending", "blocked", "failed"])
+        .order("created_at", { ascending: false })
+        .limit(5)
+        .returns<AutomationDraftRow[]>()
+    : { data: [] };
+  const { data: automationRuns } = selected
+    ? await supabase
+        .from("automation_runs")
+        .select("id, status, trigger_type, error_message, created_at, automation_rules(name)")
+        .eq("organization_id", organization.id)
+        .eq("conversation_id", selected.id)
+        .order("created_at", { ascending: false })
+        .limit(5)
+        .returns<AutomationRunRow[]>()
+    : { data: [] };
 
   return (
     <section className="h-[calc(100vh-4rem)]">
@@ -313,6 +354,35 @@ export default async function InboxPage({
                     <p>{aiSuggestion.output}</p>
                   </div>
                 ) : null}
+                {(automationDrafts ?? []).map((draft) => (
+                  <div key={draft.id} className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-medium text-emerald-800">
+                          Borrador de {draft.automation_rules?.name ?? "automatizacion"} · {draft.status}
+                        </p>
+                        <p className="mt-1 text-emerald-950">{draft.body}</p>
+                      </div>
+                      <span className="rounded-md border border-emerald-300 px-2 py-1 text-[11px] text-emerald-800">
+                        {draft.auto_send_requested ? "Auto envio solicitado" : "Revision humana"}
+                      </span>
+                    </div>
+                    {draft.status === "pending" ? (
+                      <div className="mt-3 flex gap-2">
+                        <form action={approveAutomationDraft}>
+                          <input type="hidden" name="draft_id" value={draft.id} />
+                          <input type="hidden" name="return_to" value={`/inbox?conversation=${selected.id}`} />
+                          <Button type="submit" size="sm">Aprobar y enviar</Button>
+                        </form>
+                        <form action={discardAutomationDraft}>
+                          <input type="hidden" name="draft_id" value={draft.id} />
+                          <input type="hidden" name="return_to" value={`/inbox?conversation=${selected.id}`} />
+                          <Button type="submit" size="sm" variant="outline">Descartar</Button>
+                        </form>
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   {(selectedTags ?? []).map((item) =>
                     item.tags ? (
@@ -394,6 +464,21 @@ export default async function InboxPage({
                       </div>
                     ))}
                   </div>
+                ) : null}
+                {(automationRuns ?? []).length > 0 ? (
+                  <details className="mt-3 rounded-md border bg-background p-3 text-xs">
+                    <summary className="cursor-pointer font-medium">Historial de automatizaciones</summary>
+                    <div className="mt-2 space-y-2">
+                      {(automationRuns ?? []).map((run) => (
+                        <div key={run.id} className="flex items-center justify-between gap-3 border-t pt-2">
+                          <span>{run.automation_rules?.name ?? run.trigger_type}</span>
+                          <span className={run.status === "failed" ? "text-destructive" : "text-muted-foreground"}>
+                            {run.status}{run.error_message ? ` · ${run.error_message}` : ""}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
                 ) : null}
                 <form action={createManualFollowUp} className="mt-3 grid gap-2 rounded-md border bg-background p-3 md:grid-cols-[1fr_180px_auto]">
                   <input type="hidden" name="conversation_id" value={selected.id} />

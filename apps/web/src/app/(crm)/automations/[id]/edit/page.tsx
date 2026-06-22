@@ -12,7 +12,7 @@ export default async function EditAutomationPage({ params }: { params: Promise<{
   const organization = await getActiveOrganization(supabase, user);
   const { data: rule } = await supabase
     .from("automation_rules")
-    .select("id, name, description, trigger_type, status, trigger_config, conditions, automation_actions(action_type, config, enabled)")
+    .select("id, name, description, trigger_type, status, auto_send, auto_reply_limit, auto_reply_window_minutes, trigger_config, conditions, automation_actions(action_type, config, enabled)")
     .eq("id", id)
     .eq("organization_id", organization.id)
     .single<AutomationRule>();

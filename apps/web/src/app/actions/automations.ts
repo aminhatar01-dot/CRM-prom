@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import {
   automationActionSchema,
   automationRuleSchema,
@@ -9,6 +10,7 @@ import {
   taskSchema
 } from "@crm-pro-ai/automation/rules";
 import { executeAutomationRun, type SupabaseLike } from "@/lib/automation/runner";
+import { executeRealAutomationRun, sendDraft } from "@/lib/automation/real-engine";
 import { actionErrorCode, addQueryParam } from "@/lib/action-errors";
 import { requireUser } from "@/lib/auth";
 import { getActiveOrganization } from "@/lib/organization";
@@ -27,17 +29,48 @@ function parseJson(valueToParse: string, fallback: unknown) {
 }
 
 function automationPayload(formData: FormData, organizationId: string) {
-  const actions = parseJson(value(formData, "actions_json"), []);
+  const channel = value(formData, "condition_channel");
+  const leadStatus = value(formData, "condition_lead_status");
+  const parsedConditions = parseJson(value(formData, "conditions"), {}) as Record<string, unknown>;
+  const quickAction = value(formData, "quick_action_type");
+  const quickValue = value(formData, "quick_action_value");
+  const actions = quickAction
+    ? [{
+        type: quickAction,
+        enabled: true,
+        config: quickActionConfig(quickAction, quickValue)
+      }]
+    : parseJson(value(formData, "actions_json"), []);
   return {
     organization_id: organizationId,
     name: value(formData, "name"),
     description: value(formData, "description") || null,
     trigger_type: value(formData, "trigger_type"),
     status: value(formData, "status") || "draft",
+    auto_send: formData.get("auto_send") === "on",
+    auto_reply_limit: Number(value(formData, "auto_reply_limit") || 1),
+    auto_reply_window_minutes: Number(value(formData, "auto_reply_window_minutes") || 1440),
     trigger_config: parseJson(value(formData, "trigger_config"), {}),
-    conditions: parseJson(value(formData, "conditions"), {}),
+    conditions: {
+      ...parsedConditions,
+      ...(channel ? { channel } : {}),
+      ...(leadStatus ? { lead_status: leadStatus } : {})
+    },
     actions
   };
+}
+
+function quickActionConfig(action: string, valueToUse: string) {
+  if (action === "create_task") return { title: valueToUse || "Seguimiento automatico" };
+  if (action === "generate_ai_draft" || action === "send_message") {
+    return { instruction: valueToUse || "Redactar el siguiente paso comercial." };
+  }
+  if (action === "change_lead_status") return { status: valueToUse };
+  if (action === "assign_smart_tag") return { tag_id: valueToUse };
+  if (action === "extract_variable" || action === "update_variable") return { variable_id: valueToUse };
+  if (action === "notify_internal") return { title: valueToUse || "Automatizacion ejecutada" };
+  if (action === "create_activity") return { description: valueToUse };
+  return {};
 }
 
 export async function createAutomationRule(formData: FormData) {
@@ -178,6 +211,107 @@ export async function scheduleManualAutomationRun(formData: FormData) {
   revalidatePath("/automations");
   revalidatePath(`/automations/${ruleId}`);
   redirect(`${returnTo}?run=1`);
+}
+
+export async function testAutomationWithConversation(formData: FormData) {
+  const ruleId = value(formData, "rule_id");
+  const conversationId = value(formData, "conversation_id");
+  const { supabase, user } = await requireUser();
+  const organization = await getActiveOrganization(supabase, user);
+  const parsed = z.object({
+    ruleId: z.string().uuid(),
+    conversationId: z.string().uuid()
+  }).safeParse({ ruleId, conversationId });
+  if (!parsed.success) redirect(`/automations/${ruleId}?error=invalid-test`);
+
+  const { data: conversation } = await supabase.from("conversations")
+    .select("id, lead_id, contact_id")
+    .eq("id", conversationId).eq("organization_id", organization.id)
+    .maybeSingle<{ id: string; lead_id: string | null; contact_id: string | null }>();
+  if (!conversation) redirect(`/automations/${ruleId}?error=conversation-not-found`);
+  const { data: latestMessage } = await supabase.from("messages").select("id")
+    .eq("organization_id", organization.id).eq("conversation_id", conversation.id)
+    .order("created_at", { ascending: false }).limit(1).maybeSingle<{ id: string }>();
+  const { data: rule } = await supabase.from("automation_rules").select("trigger_type")
+    .eq("id", ruleId).eq("organization_id", organization.id)
+    .single<{ trigger_type: (typeof automationTriggerTypes)[number] }>();
+  if (!rule) redirect(`/automations/${ruleId}?error=not-found`);
+
+  const { data: run, error } = await supabase.from("automation_runs").insert({
+    organization_id: organization.id,
+    rule_id: ruleId,
+    trigger_type: rule.trigger_type,
+    status: "pending",
+    conversation_id: conversation.id,
+    lead_id: conversation.lead_id,
+    contact_id: conversation.contact_id,
+    message_id: latestMessage?.id,
+    initiated_by: user.id,
+    idempotency_key: `manual-test:${ruleId}:${conversation.id}:${Date.now()}`,
+    context: {
+      organization_id: organization.id,
+      conversation_id: conversation.id,
+      lead_id: conversation.lead_id,
+      contact_id: conversation.contact_id,
+      message_id: latestMessage?.id
+    }
+  }).select("id").single<{ id: string }>();
+  if (error || !run) redirect(`/automations/${ruleId}?error=${actionErrorCode(error)}`);
+  await executeRealAutomationRun(supabase, run.id);
+  revalidatePath(`/automations/${ruleId}`);
+  revalidatePath("/inbox");
+  redirect(`/automations/${ruleId}?test=1`);
+}
+
+export async function updateAutomationStatus(formData: FormData) {
+  const ruleId = value(formData, "rule_id");
+  const status = value(formData, "status");
+  const { supabase, user } = await requireUser();
+  const organization = await getActiveOrganization(supabase, user);
+  if (!["active", "paused"].includes(status)) redirect(`/automations/${ruleId}?error=invalid-status`);
+  await supabase.from("automation_rules").update({
+    status,
+    enabled: status === "active"
+  }).eq("id", ruleId).eq("organization_id", organization.id);
+  await audit("update_automation_status", "automation_rules", ruleId, organization.id, { status });
+  revalidatePath("/automations");
+  revalidatePath(`/automations/${ruleId}`);
+  redirect(`/automations/${ruleId}?status=${status}`);
+}
+
+export async function approveAutomationDraft(formData: FormData) {
+  const draftId = value(formData, "draft_id");
+  const returnTo = value(formData, "return_to") || "/inbox";
+  const { supabase, user } = await requireUser();
+  const organization = await getActiveOrganization(supabase, user);
+  const { data: draft } = await supabase.from("automation_drafts")
+    .select("id, conversation_id, body, status")
+    .eq("id", draftId).eq("organization_id", organization.id)
+    .eq("status", "pending")
+    .maybeSingle<{ id: string; conversation_id: string; body: string; status: string }>();
+  if (!draft) redirect(addQueryParam(returnTo, "error", "draft-not-found"));
+  try {
+    await sendDraft(supabase, organization.id, draft.id, draft.conversation_id, draft.body, user.id);
+  } catch {
+    redirect(addQueryParam(returnTo, "error", "draft-send-failed"));
+  }
+  revalidatePath("/inbox");
+  redirect(addQueryParam(returnTo, "draft", "sent"));
+}
+
+export async function discardAutomationDraft(formData: FormData) {
+  const draftId = value(formData, "draft_id");
+  const returnTo = value(formData, "return_to") || "/inbox";
+  const { supabase, user } = await requireUser();
+  const organization = await getActiveOrganization(supabase, user);
+  await supabase.from("automation_drafts").update({
+    status: "discarded",
+    approved_by: user.id,
+    approved_at: new Date().toISOString()
+  }).eq("id", draftId).eq("organization_id", organization.id).eq("status", "pending");
+  await audit("discard_automation_draft", "automation_drafts", draftId, organization.id);
+  revalidatePath("/inbox");
+  redirect(addQueryParam(returnTo, "draft", "discarded"));
 }
 
 export async function createManualFollowUp(formData: FormData) {

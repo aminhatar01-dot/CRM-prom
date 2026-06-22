@@ -10,6 +10,9 @@ type AutomationFormRule = {
   description: string | null;
   trigger_type: string;
   status: string;
+  auto_send: boolean;
+  auto_reply_limit: number;
+  auto_reply_window_minutes: number;
   trigger_config: Record<string, unknown>;
   conditions: Record<string, unknown>;
   automation_actions: Array<{
@@ -86,6 +89,62 @@ export function AutomationForm({ rule }: { rule?: AutomationFormRule }) {
           </select>
         </div>
       </div>
+      <div className="grid gap-4 rounded-md border p-4 md:grid-cols-3">
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" name="auto_send" defaultChecked={rule?.auto_send ?? false} />
+          Auto envio
+        </label>
+        <div className="space-y-2">
+          <Label htmlFor="auto_reply_limit">Maximo por conversacion</Label>
+          <Input
+            id="auto_reply_limit"
+            name="auto_reply_limit"
+            type="number"
+            min={1}
+            max={10}
+            defaultValue={rule?.auto_reply_limit ?? 1}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="auto_reply_window_minutes">Ventana del limite (min)</Label>
+          <Input
+            id="auto_reply_window_minutes"
+            name="auto_reply_window_minutes"
+            type="number"
+            min={1}
+            max={1440}
+            defaultValue={rule?.auto_reply_window_minutes ?? 1440}
+          />
+        </div>
+        <p className="text-xs text-muted-foreground md:col-span-3">
+          Modo seguro por defecto: desmarcado genera borradores para aprobacion humana. El auto envio solo funciona dentro de las 24 horas de WhatsApp.
+        </p>
+      </div>
+      <div className="space-y-2">
+        <Label>Condiciones simples</Label>
+        <div className="grid gap-3 md:grid-cols-2">
+          <select
+            name="condition_channel"
+            defaultValue={typeof rule?.conditions.channel === "string" ? rule.conditions.channel : ""}
+            className="h-10 rounded-md border bg-background px-3 text-sm"
+          >
+            <option value="">Cualquier canal</option>
+            <option value="whatsapp">WhatsApp</option>
+            <option value="webchat">WebChat</option>
+            <option value="manual">Manual</option>
+          </select>
+          <select
+            name="condition_lead_status"
+            defaultValue={typeof rule?.conditions.lead_status === "string" ? rule.conditions.lead_status : ""}
+            className="h-10 rounded-md border bg-background px-3 text-sm"
+          >
+            <option value="">Cualquier estado del lead</option>
+            {["nuevo", "contactado", "interesado", "propuesta", "ganado", "perdido"].map((status) => (
+              <option key={status} value={status}>{status}</option>
+            ))}
+          </select>
+        </div>
+      </div>
       <div className="space-y-2">
         <Label htmlFor="conditions">Condiciones JSON</Label>
         <textarea
@@ -94,6 +153,24 @@ export function AutomationForm({ rule }: { rule?: AutomationFormRule }) {
           defaultValue={JSON.stringify(rule?.conditions ?? {}, null, 2)}
           className="min-h-28 w-full rounded-md border bg-background px-3 py-2 font-mono text-sm"
         />
+      </div>
+      <div className="space-y-2">
+        <Label>Accion rapida</Label>
+        <div className="grid gap-3 md:grid-cols-2">
+          <select name="quick_action_type" className="h-10 rounded-md border bg-background px-3 text-sm">
+            <option value="">Usar acciones JSON</option>
+            {automationActionTypes.map((actionType) => (
+              <option key={actionType} value={actionType}>{actionType}</option>
+            ))}
+          </select>
+          <Input
+            name="quick_action_value"
+            placeholder="Titulo, estado, tag ID, variable ID o instruccion"
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Si eliges una accion rapida, reemplaza el bloque JSON al guardar.
+        </p>
       </div>
       <div className="space-y-2">
         <Label htmlFor="trigger_config">Configuracion del trigger JSON</Label>

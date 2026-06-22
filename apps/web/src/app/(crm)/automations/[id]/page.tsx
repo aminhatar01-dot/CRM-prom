@@ -3,7 +3,11 @@ import { notFound } from "next/navigation";
 import { Play, Pencil } from "lucide-react";
 import { Button } from "@crm-pro-ai/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@crm-pro-ai/ui/card";
-import { scheduleManualAutomationRun } from "@/app/actions/automations";
+import {
+  scheduleManualAutomationRun,
+  testAutomationWithConversation,
+  updateAutomationStatus
+} from "@/app/actions/automations";
 import { requireUser } from "@/lib/auth";
 import { getActiveOrganization } from "@/lib/organization";
 
@@ -13,6 +17,9 @@ type AutomationRule = {
   description: string | null;
   trigger_type: string;
   status: string;
+  auto_send: boolean;
+  auto_reply_limit: number;
+  auto_reply_window_minutes: number;
   conditions: Record<string, unknown>;
   trigger_config: Record<string, unknown>;
   automation_actions: Array<{
@@ -42,7 +49,7 @@ export default async function AutomationDetailPage({ params }: { params: Promise
   const organization = await getActiveOrganization(supabase, user);
   const { data: rule } = await supabase
     .from("automation_rules")
-    .select("id, name, description, trigger_type, status, conditions, trigger_config, automation_actions(id, action_type, config, enabled, position)")
+    .select("id, name, description, trigger_type, status, auto_send, auto_reply_limit, auto_reply_window_minutes, conditions, trigger_config, automation_actions(id, action_type, config, enabled, position)")
     .eq("id", id)
     .eq("organization_id", organization.id)
     .single<AutomationRule>();
@@ -57,6 +64,19 @@ export default async function AutomationDetailPage({ params }: { params: Promise
     .order("created_at", { ascending: false })
     .limit(20)
     .returns<AutomationRun[]>();
+  const { data: conversations } = await supabase
+    .from("conversations")
+    .select("id, channel, contacts(full_name), leads(title)")
+    .eq("organization_id", organization.id)
+    .is("archived_at", null)
+    .order("updated_at", { ascending: false })
+    .limit(20)
+    .returns<Array<{
+      id: string;
+      channel: string;
+      contacts: { full_name: string } | null;
+      leads: { title: string } | null;
+    }>>();
 
   return (
     <section className="mx-auto max-w-6xl px-4 py-6 lg:px-6">
@@ -86,6 +106,13 @@ export default async function AutomationDetailPage({ params }: { params: Promise
               Ejecutar manual
             </Button>
           </form>
+          <form action={updateAutomationStatus}>
+            <input type="hidden" name="rule_id" value={rule.id} />
+            <input type="hidden" name="status" value={rule.status === "active" ? "paused" : "active"} />
+            <Button type="submit" variant="outline">
+              {rule.status === "active" ? "Pausar" : "Activar"}
+            </Button>
+          </form>
         </div>
       </div>
 
@@ -98,7 +125,13 @@ export default async function AutomationDetailPage({ params }: { params: Promise
             <div className="flex flex-wrap gap-2 text-xs">
               <span className="rounded-md border px-2 py-1">{rule.trigger_type}</span>
               <span className="rounded-md border px-2 py-1">{rule.status}</span>
+              <span className={`rounded-md border px-2 py-1 ${rule.auto_send ? "border-amber-400 text-amber-700" : "border-emerald-400 text-emerald-700"}`}>
+                {rule.auto_send ? "Auto envio" : "Borrador seguro"}
+              </span>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Limite: {rule.auto_reply_limit} respuesta(s) cada {rule.auto_reply_window_minutes} minutos.
+            </p>
             <JsonBlock title="Condiciones" value={rule.conditions} />
             <JsonBlock title="Trigger" value={rule.trigger_config} />
           </CardContent>
@@ -122,6 +155,29 @@ export default async function AutomationDetailPage({ params }: { params: Promise
           </CardContent>
         </Card>
       </div>
+
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle>Probar con conversacion existente</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form action={testAutomationWithConversation} className="flex flex-col gap-3 md:flex-row">
+            <input type="hidden" name="rule_id" value={rule.id} />
+            <select name="conversation_id" className="h-10 flex-1 rounded-md border bg-background px-3 text-sm" required>
+              <option value="">Seleccionar conversacion</option>
+              {(conversations ?? []).map((conversation) => (
+                <option key={conversation.id} value={conversation.id}>
+                  {conversation.contacts?.full_name ?? conversation.leads?.title ?? conversation.id.slice(0, 8)} · {conversation.channel}
+                </option>
+              ))}
+            </select>
+            <Button type="submit">
+              <Play className="size-4" />
+              Probar
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
 
       <Card className="mt-4">
         <CardHeader>
