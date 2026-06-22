@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  isAutoReplyAllowed,
+  isWithinWhatsAppWindow,
   canExecuteRule,
   conditionsMatch,
   prepareAutomationOperations,
@@ -16,6 +18,9 @@ const baseRule: AutomationRule = {
   description: null,
   trigger_type: "lead_created",
   status: "active",
+  auto_send: false,
+  auto_reply_limit: 1,
+  auto_reply_window_minutes: 1440,
   trigger_config: {},
   conditions: {},
   actions: [{ type: "create_task", enabled: true, config: { title: "Follow up" } }]
@@ -87,5 +92,20 @@ describe("automation engine", () => {
         actions: baseRule.actions
       }),
     ).toThrow("Cross-tenant automation execution rejected");
+  });
+});
+
+describe("automatic reply safety", () => {
+  it("enforces the WhatsApp window", () => {
+    const now = Date.parse("2026-06-22T12:00:00.000Z");
+    expect(isWithinWhatsAppWindow("2026-06-21T12:00:01.000Z", now)).toBe(true);
+    expect(isWithinWhatsAppWindow("2026-06-21T11:59:59.000Z", now)).toBe(false);
+  });
+
+  it("blocks loops and organization rate excess", () => {
+    expect(isAutoReplyAllowed({ conversationSent: 1, organizationSent: 1, conversationLimit: 1 }))
+      .toEqual({ allowed: false, reason: "conversation_limit" });
+    expect(isAutoReplyAllowed({ conversationSent: 0, organizationSent: 20, conversationLimit: 1 }))
+      .toEqual({ allowed: false, reason: "organization_rate_limit" });
   });
 });

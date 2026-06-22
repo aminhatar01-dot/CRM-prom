@@ -2,6 +2,8 @@ import { z } from "zod";
 
 export const automationTriggerTypes = [
   "lead_created",
+  "lead_status_changed",
+  "conversation_created",
   "message_received",
   "smart_tag_assigned",
   "variable_updated",
@@ -11,7 +13,11 @@ export const automationTriggerTypes = [
 
 export const automationActionTypes = [
   "send_message",
+  "generate_ai_draft",
   "assign_smart_tag",
+  "extract_variable",
+  "change_lead_status",
+  "create_activity",
   "update_variable",
   "create_task",
   "pause_ai",
@@ -36,6 +42,9 @@ export const automationRuleSchema = z.object({
   description: z.string().trim().max(500).nullable().optional(),
   trigger_type: z.enum(automationTriggerTypes),
   status: z.enum(automationRuleStatuses).default("draft"),
+  auto_send: z.boolean().default(false),
+  auto_reply_limit: z.number().int().min(1).max(10).default(1),
+  auto_reply_window_minutes: z.number().int().min(1).max(1440).default(1440),
   trigger_config: jsonRecordSchema,
   conditions: jsonRecordSchema,
   actions: z.array(automationActionSchema).min(1).max(10)

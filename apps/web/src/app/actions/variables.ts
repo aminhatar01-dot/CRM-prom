@@ -15,6 +15,7 @@ import {
   mapVariable,
   type VariableRow
 } from "@/lib/ai/variable-context";
+import { dispatchAutomationEvent } from "@/lib/automation/real-engine";
 
 function value(formData: FormData, key: string) {
   const formValue = formData.get(key);
@@ -168,6 +169,16 @@ export async function extractConversationVariables(formData: FormData) {
           sourceMessageId: result.sourceMessageId
         });
       }
+      await dispatchAutomationEvent(supabase, {
+        organizationId: organization.id,
+        trigger: "variable_updated",
+        eventId: `${conversationId}:${variable.id}:${result.sourceMessageId ?? "latest"}`,
+        leadId,
+        conversationId,
+        messageId: result.sourceMessageId,
+        variableId: variable.id,
+        actorUserId: user.id
+      });
     }
 
     await audit("extract_variable", "variable_extraction_logs", log?.id, organization.id, {
@@ -244,6 +255,15 @@ export async function extractLeadVariables(formData: FormData) {
         value: result.value,
         confidence: result.confidence,
         sourceMessageId: result.sourceMessageId
+      });
+      await dispatchAutomationEvent(supabase, {
+        organizationId: organization.id,
+        trigger: "variable_updated",
+        eventId: `${leadId}:${variable.id}:${result.sourceMessageId ?? "latest"}`,
+        leadId,
+        messageId: result.sourceMessageId,
+        variableId: variable.id,
+        actorUserId: user.id
       });
     }
 

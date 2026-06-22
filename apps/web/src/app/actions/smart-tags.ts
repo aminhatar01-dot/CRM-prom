@@ -18,6 +18,7 @@ import {
   mapSmartTag,
   type TagRow
 } from "@/lib/ai/smart-tag-context";
+import { dispatchAutomationEvent } from "@/lib/automation/real-engine";
 
 function value(formData: FormData, key: string) {
   const formValue = formData.get(key);
@@ -126,6 +127,15 @@ export async function assignSmartTag(formData: FormData) {
   await audit("assign_smart_tag", "tags", parsed.data.tag_id, organization.id, {
     lead_id: parsed.data.lead_id,
     conversation_id: parsed.data.conversation_id
+  });
+  await dispatchAutomationEvent(supabase, {
+    organizationId: organization.id,
+    trigger: "smart_tag_assigned",
+    eventId: `${parsed.data.tag_id}:${parsed.data.conversation_id ?? parsed.data.lead_id}`,
+    leadId: parsed.data.lead_id,
+    conversationId: parsed.data.conversation_id,
+    smartTagId: parsed.data.tag_id,
+    actorUserId: user.id
   });
   revalidatePath(returnTo);
   redirect(returnTo);

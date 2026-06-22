@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { WhatsAppCloudService } from "@crm-pro-ai/integrations/whatsapp-cloud-service";
 import { getServerEnv } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { dispatchAutomationEvent } from "@/lib/automation/real-engine";
 import {
   messageBody,
   whatsappWebhookPayloadSchema,
@@ -77,12 +78,52 @@ export async function POST(request: Request) {
 
       for (const message of change.value.messages ?? []) {
         const contact = change.value.contacts?.find((item) => item.wa_id === message.from);
-        await persistInboundMessage(supabase, setting, message, contact?.profile?.name, change.value);
+        const persisted = await persistInboundMessage(supabase, setting, message, contact?.profile?.name, change.value);
+        if (persisted) {
+          if (persisted.conversationCreated) {
+            await triggerAutomationsSafely(supabase, {
+              organizationId: setting.organization_id,
+              trigger: "conversation_created",
+              eventId: persisted.conversationId,
+              conversationId: persisted.conversationId,
+              contactId: persisted.contactId,
+              messageId: persisted.messageId
+            });
+          }
+          await triggerAutomationsSafely(supabase, {
+            organizationId: setting.organization_id,
+            trigger: "message_received",
+            eventId: message.id,
+            conversationId: persisted.conversationId,
+            contactId: persisted.contactId,
+            messageId: persisted.messageId,
+            metadata: { channel: "whatsapp", whatsapp_message_id: message.id }
+          });
+        }
       }
     }
   }
 
   return NextResponse.json({ ok: true });
+}
+
+async function triggerAutomationsSafely(
+  supabase: ReturnType<typeof createAdminClient>,
+  event: Parameters<typeof dispatchAutomationEvent>[1],
+) {
+  try {
+    await dispatchAutomationEvent(supabase, event);
+  } catch (error) {
+    await supabase.from("whatsapp_events").insert({
+      organization_id: event.organizationId,
+      direction: "error",
+      event_type: "automation_dispatch_failed",
+      conversation_id: event.conversationId,
+      message_id: event.messageId,
+      payload: { trigger: event.trigger, event_id: event.eventId },
+      error_message: error instanceof Error ? error.message.slice(0, 500) : "Automation dispatch failed"
+    });
+  }
 }
 
 async function persistInboundMessage(
@@ -122,7 +163,7 @@ async function persistInboundMessage(
         .single<{ id: string }>()
     ).data?.id;
 
-  if (!contactId) return;
+  if (!contactId) return null;
 
   const { data: existingConversation } = await supabase
     .from("conversations")
@@ -136,9 +177,11 @@ async function persistInboundMessage(
     .limit(1)
     .maybeSingle<{ id: string }>();
 
-  const conversationId =
-    existingConversation?.id ??
-    (
+  let conversationCreated = false;
+  let conversationId = existingConversation?.id;
+  if (!conversationId) {
+    conversationCreated = true;
+    conversationId = (
       await supabase
         .from("conversations")
         .insert({
@@ -152,8 +195,9 @@ async function persistInboundMessage(
         .select("id")
         .single<{ id: string }>()
     ).data?.id;
+  }
 
-  if (!conversationId) return;
+  if (!conversationId) return null;
 
   const { data: createdMessage } = await supabase
     .from("messages")
@@ -190,6 +234,15 @@ async function persistInboundMessage(
     contact_wa_id: message.from,
     payload: payload as Record<string, unknown>
   });
+
+  return createdMessage?.id
+    ? {
+        contactId,
+        conversationId,
+        conversationCreated,
+        messageId: createdMessage.id
+      }
+    : null;
 }
 
 async function persistStatus(

@@ -19,6 +19,7 @@ import { actionErrorCode, addQueryParam } from "@/lib/action-errors";
 import { getServerEnv } from "@/lib/env";
 import { getActiveOrganization } from "@/lib/organization";
 import { getWhatsAppAccessToken } from "@/lib/whatsapp/token-store";
+import { dispatchAutomationEvent } from "@/lib/automation/real-engine";
 import { z } from "zod";
 
 function value(formData: FormData, key: string) {
@@ -86,6 +87,14 @@ export async function createLead(formData: FormData) {
   if (error || !data) redirect(`/leads/new?error=${actionErrorCode(error)}`);
 
   await audit("create_lead", "leads", data.id, organization.id);
+  await dispatchAutomationEvent(supabase, {
+    organizationId: organization.id,
+    trigger: "lead_created",
+    eventId: data.id,
+    leadId: data.id,
+    ownerId: parsed.data.owner_id || null,
+    actorUserId: user.id
+  });
   revalidatePath("/leads");
   redirect(`/leads/${data.id}`);
 }
@@ -99,6 +108,12 @@ export async function updateLead(formData: FormData) {
 
   const { supabase, user } = await requireUser();
   const organization = await getActiveOrganization(supabase, user);
+  const { data: previous } = await supabase
+    .from("leads")
+    .select("status")
+    .eq("id", parsed.data.id)
+    .eq("organization_id", organization.id)
+    .maybeSingle<{ status: string }>();
   const fullName = [parsed.data.first_name, parsed.data.last_name].filter(Boolean).join(" ");
   const { id, ...payload } = parsed.data;
   const { data: updated, error } = await supabase
@@ -117,6 +132,17 @@ export async function updateLead(formData: FormData) {
   if (!updated) redirect(`/leads/${id}/edit?error=not-found`);
 
   await audit("update_lead", "leads", id, organization.id);
+  if (previous?.status && previous.status !== payload.status) {
+    await dispatchAutomationEvent(supabase, {
+      organizationId: organization.id,
+      trigger: "lead_status_changed",
+      eventId: `${id}:${payload.status}`,
+      leadId: id,
+      ownerId: payload.owner_id || null,
+      actorUserId: user.id,
+      metadata: { previous_status: previous.status, lead_status: payload.status }
+    });
+  }
   revalidatePath("/leads");
   revalidatePath(`/leads/${id}`);
   redirect(`/leads/${id}`);
@@ -131,6 +157,12 @@ export async function updateLeadPipelineStatus(input: {
 
   const { supabase, user } = await requireUser();
   const organization = await getActiveOrganization(supabase, user);
+  const { data: previous } = await supabase
+    .from("leads")
+    .select("status, owner_id")
+    .eq("id", parsed.data.id)
+    .eq("organization_id", organization.id)
+    .maybeSingle<{ status: string; owner_id: string | null }>();
   const { data, error } = await supabase
     .from("leads")
     .update({ status: parsed.data.status })
@@ -155,6 +187,17 @@ export async function updateLeadPipelineStatus(input: {
   await audit("update_lead_pipeline_status", "leads", data.id, organization.id, {
     status: parsed.data.status
   });
+  if (previous?.status && previous.status !== parsed.data.status) {
+    await dispatchAutomationEvent(supabase, {
+      organizationId: organization.id,
+      trigger: "lead_status_changed",
+      eventId: `${data.id}:${data.updated_at}`,
+      leadId: data.id,
+      ownerId: previous.owner_id,
+      actorUserId: user.id,
+      metadata: { previous_status: previous.status, lead_status: parsed.data.status }
+    });
+  }
   revalidatePath("/pipeline");
   revalidatePath("/leads");
   revalidatePath(`/leads/${data.id}`);

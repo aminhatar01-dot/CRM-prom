@@ -170,3 +170,25 @@ function assertSameTenant(ruleOrganizationId: string, contextOrganizationId: str
     throw new Error("Cross-tenant automation execution rejected");
   }
 }
+
+export function isWithinWhatsAppWindow(lastInboundAt: string | null | undefined, now = Date.now()) {
+  if (!lastInboundAt) return false;
+  const timestamp = new Date(lastInboundAt).getTime();
+  return Number.isFinite(timestamp) && now - timestamp <= 24 * 60 * 60 * 1000;
+}
+
+export function isAutoReplyAllowed({
+  conversationSent,
+  organizationSent,
+  conversationLimit,
+  organizationLimit = 20
+}: {
+  conversationSent: number;
+  organizationSent: number;
+  conversationLimit: number;
+  organizationLimit?: number;
+}) {
+  if (conversationSent >= conversationLimit) return { allowed: false, reason: "conversation_limit" };
+  if (organizationSent >= organizationLimit) return { allowed: false, reason: "organization_rate_limit" };
+  return { allowed: true, reason: null };
+}
