@@ -23,7 +23,12 @@ const errorMessages: Record<string, string> = {
   "no-assistant": "No hay un asistente activo para esta conversacion.",
   "no-smart-tags": "No hay Smart Tags activos para analizar.",
   "no-variables": "No hay Variables Inteligentes activas para extraer.",
-  "knowledge-indexing": "El documento se guardo, pero no pudo indexarse. Revisa el estado y vuelve a intentar."
+  "knowledge-indexing": "El documento se guardo, pero no pudo indexarse. Revisa el estado y vuelve a intentar.",
+  "draft-not-found": "El borrador ya fue enviado, descartado o no existe.",
+  "draft-recipient-missing": "No pudimos enviar el borrador porque la conversacion no tiene telefono de WhatsApp.",
+  "draft-whatsapp-config": "No pudimos enviar el borrador porque WhatsApp no esta configurado para esta organizacion.",
+  "draft-whatsapp-api": "WhatsApp rechazo el envio del borrador. Revisa el canal o intenta nuevamente.",
+  "draft-send-failed": "No pudimos enviar el borrador IA. El error quedo registrado en la conversacion."
 };
 
 const successMessages: Record<string, string> = {

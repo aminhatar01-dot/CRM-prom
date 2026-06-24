@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { AIOrchestrator } from "@crm-pro-ai/ai/orchestrator";
 import { VariableExtractor } from "@crm-pro-ai/ai/variable-extractor";
-import { WhatsAppCloudService } from "@crm-pro-ai/integrations/whatsapp-cloud-service";
+import { WhatsAppCloudError, WhatsAppCloudService } from "@crm-pro-ai/integrations/whatsapp-cloud-service";
 import {
   conditionsMatch,
   isAutoReplyAllowed,
@@ -466,30 +466,50 @@ export async function sendDraft(
       contacts: { phone: string | null } | null;
       leads: { phone: string | null } | null;
     }>();
-  if (!conversation || conversation.channel !== "whatsapp") throw new Error("WhatsApp conversation not found.");
+  if (!conversation || conversation.channel !== "whatsapp") {
+    const message = "WhatsApp conversation not found.";
+    await markDraftFailed(supabase, organizationId, draftId, message);
+    throw new Error(message);
+  }
   const recipient = conversation.external_contact_id ?? conversation.contacts?.phone ?? conversation.leads?.phone;
-  if (!recipient) throw new Error("Recipient phone is missing.");
+  if (!recipient) {
+    const message = "Recipient phone is missing.";
+    await markDraftFailed(supabase, organizationId, draftId, message);
+    throw new Error(message);
+  }
   const { data: setting } = await supabase.from("whatsapp_channel_settings")
     .select("id, phone_number_id, connection_method").eq("organization_id", organizationId)
     .eq("enabled", true).limit(1).maybeSingle<{ id: string; phone_number_id: string; connection_method: string }>();
-  if (!setting) throw new Error("WhatsApp channel is not configured.");
+  if (!setting) {
+    const message = "WhatsApp channel is not configured.";
+    await markDraftFailed(supabase, organizationId, draftId, message);
+    throw new Error(message);
+  }
   const token = await getWhatsAppAccessToken({
     organizationId,
     channelSettingId: setting.id,
     connectionMethod: setting.connection_method
   });
-  if (!token) throw new Error("WhatsApp access token is unavailable.");
+  if (!token) {
+    const message = "WhatsApp access token is unavailable.";
+    await markDraftFailed(supabase, organizationId, draftId, message);
+    throw new Error(message);
+  }
   const { data: message, error: messageError } = await supabase.from("messages").insert({
     organization_id: organizationId,
     conversation_id: conversationId,
     direction: "outbound",
-    sender_type: "agent",
+    sender_type: approvedBy ? "user" : "assistant",
+    sender_user_id: approvedBy,
     body,
     channel: "whatsapp",
     status: "pending",
     metadata: { automation_draft_id: draftId, auto_send: !approvedBy }
   }).select("id").single<{ id: string }>();
-  if (messageError) throw messageError;
+  if (messageError) {
+    await markDraftFailed(supabase, organizationId, draftId, safeError(messageError));
+    throw messageError;
+  }
   try {
     const response = await new WhatsAppCloudService({
       accessToken: token,
@@ -530,7 +550,7 @@ export async function sendDraft(
     });
     return { attempted: true, sent: true, message_id: message.id };
   } catch (error) {
-    const messageText = safeError(error);
+    const messageText = safeWhatsAppError(error);
     await supabase.from("messages").update({
       status: "failed",
       metadata: { automation_draft_id: draftId, error: messageText }
@@ -540,8 +560,31 @@ export async function sendDraft(
       error_message: messageText,
       sent_message_id: message.id
     }).eq("id", draftId).eq("organization_id", organizationId);
+    await supabase.from("whatsapp_events").insert({
+      organization_id: organizationId,
+      direction: "error",
+      event_type: "send_failed",
+      conversation_id: conversationId,
+      message_id: message.id,
+      phone_number_id: setting.phone_number_id,
+      contact_wa_id: recipient,
+      payload: safeWhatsAppPayload(error),
+      error_message: messageText
+    });
     throw error;
   }
+}
+
+async function markDraftFailed(
+  supabase: SupabaseClient,
+  organizationId: string,
+  draftId: string,
+  errorMessage: string,
+) {
+  await supabase.from("automation_drafts").update({
+    status: "failed",
+    error_message: errorMessage
+  }).eq("id", draftId).eq("organization_id", organizationId);
 }
 
 async function extractVariable(
@@ -695,4 +738,38 @@ function sanitizeRecord(value: Record<string, unknown>) {
 
 function safeError(error: unknown) {
   return (error instanceof Error ? error.message : "Automation action failed").slice(0, 500);
+}
+
+function safeWhatsAppError(error: unknown) {
+  if (error instanceof WhatsAppCloudError) {
+    const graphMessage = graphErrorMessage(error.payload);
+    return graphMessage
+      ? `WhatsApp Cloud API request failed (${error.status}): ${graphMessage}`.slice(0, 500)
+      : `WhatsApp Cloud API request failed (${error.status}).`;
+  }
+
+  return safeError(error);
+}
+
+function safeWhatsAppPayload(error: unknown) {
+  if (!(error instanceof WhatsAppCloudError)) return {};
+
+  const payload = error.payload as { error?: { message?: string; type?: string; code?: number; error_subcode?: number } };
+  return {
+    status: error.status,
+    error: payload.error
+      ? {
+          message: payload.error.message,
+          type: payload.error.type,
+          code: payload.error.code,
+          error_subcode: payload.error.error_subcode
+        }
+      : undefined
+  };
+}
+
+function graphErrorMessage(payload: unknown) {
+  if (!payload || typeof payload !== "object" || !("error" in payload)) return null;
+  const error = (payload as { error?: { message?: unknown } }).error;
+  return typeof error?.message === "string" ? error.message : null;
 }

@@ -75,6 +75,7 @@ type AutomationDraftRow = {
   id: string;
   body: string;
   status: string;
+  error_message: string | null;
   auto_send_requested: boolean;
   model: string | null;
   created_at: string;
@@ -222,7 +223,7 @@ export default async function InboxPage({
   const { data: automationDrafts } = selected
     ? await supabase
         .from("automation_drafts")
-        .select("id, body, status, auto_send_requested, model, created_at, automation_rules(name)")
+        .select("id, body, status, error_message, auto_send_requested, model, created_at, automation_rules(name)")
         .eq("organization_id", organization.id)
         .eq("conversation_id", selected.id)
         .in("status", ["pending", "blocked", "failed"])
@@ -391,6 +392,11 @@ export default async function InboxPage({
                           Borrador de {draft.automation_rules?.name ?? "automatizacion"} · {draft.status}
                         </p>
                         <p className="mt-1 text-emerald-950">{draft.body}</p>
+                        {draft.error_message ? (
+                          <p className="mt-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+                            {draft.error_message}
+                          </p>
+                        ) : null}
                       </div>
                       <span className="rounded-md border border-emerald-300 px-2 py-1 text-[11px] text-emerald-800">
                         {draft.auto_send_requested ? "Auto envio solicitado" : "Revision humana"}

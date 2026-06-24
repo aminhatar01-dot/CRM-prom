@@ -290,10 +290,24 @@ export async function approveAutomationDraft(formData: FormData) {
     .eq("status", "pending")
     .maybeSingle<{ id: string; conversation_id: string; body: string; status: string }>();
   if (!draft) redirect(addQueryParam(returnTo, "error", "draft-not-found"));
+
+  const { data: reserved, error: reserveError } = await supabase.from("automation_drafts").update({
+    status: "approved",
+    approved_by: user.id,
+    approved_at: new Date().toISOString()
+  }).eq("id", draft.id)
+    .eq("organization_id", organization.id)
+    .eq("status", "pending")
+    .select("id")
+    .maybeSingle<{ id: string }>();
+  if (reserveError || !reserved) {
+    redirect(addQueryParam(returnTo, "error", reserveError ? actionErrorCode(reserveError) : "draft-not-found"));
+  }
+
   try {
     await sendDraft(supabase, organization.id, draft.id, draft.conversation_id, draft.body, user.id);
-  } catch {
-    redirect(addQueryParam(returnTo, "error", "draft-send-failed"));
+  } catch (error) {
+    redirect(addQueryParam(returnTo, "error", draftSendErrorCode(error)));
   }
   revalidatePath("/inbox");
   redirect(addQueryParam(returnTo, "draft", "sent"));
@@ -387,4 +401,12 @@ async function audit(
     entity_id: entityId,
     metadata
   });
+}
+
+function draftSendErrorCode(error: unknown) {
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  if (message.includes("recipient phone")) return "draft-recipient-missing";
+  if (message.includes("whatsapp channel") || message.includes("access token")) return "draft-whatsapp-config";
+  if (message.includes("whatsapp cloud api")) return "draft-whatsapp-api";
+  return "draft-send-failed";
 }
