@@ -19,6 +19,7 @@ type AssistantDetail = {
   fallback_message: string;
   active: boolean;
   channel_id: string | null;
+  auto_reply_enabled: boolean;
 };
 
 type AssistantTest = {
@@ -50,9 +51,9 @@ export default async function AssistantDetailPage({
   const { supabase, user } = await requireUser();
   const organization = await getActiveOrganization(supabase, user);
   const [{ data: assistant }, { data: tests }, { data: conversations }] = await Promise.all([
-    supabase
+      supabase
       .from("ai_assistants")
-      .select("id, name, description, prompt, objective, tone, rules, fallback_message, active, channel_id")
+      .select("id, name, description, prompt, objective, tone, rules, fallback_message, active, channel_id, auto_reply_enabled")
       .eq("id", id)
       .eq("organization_id", organization.id)
       .is("archived_at", null)
@@ -110,6 +111,7 @@ export default async function AssistantDetailPage({
             <Info label="Tono" value={assistant.tone} />
             <Info label="Canal" value={assistant.channel_id ?? "todos"} />
             <Info label="Estado" value={assistant.active ? "active" : "inactive"} />
+            <Info label="Auto respuesta" value={assistant.auto_reply_enabled ? "habilitada" : "desactivada"} />
             <Info label="Fallback" value={assistant.fallback_message} />
             <div>
               <p className="text-muted-foreground">Reglas</p>

@@ -9,7 +9,7 @@ export default async function EditAssistantPage({ params }: { params: Promise<{ 
   const organization = await getActiveOrganization(supabase, user);
   const { data: assistant } = await supabase
     .from("ai_assistants")
-    .select("id, name, description, prompt, objective, tone, rules, fallback_message, active, channel_id")
+    .select("id, name, description, prompt, objective, tone, rules, fallback_message, active, channel_id, auto_reply_enabled")
     .eq("id", id)
     .eq("organization_id", organization.id)
     .is("archived_at", null)

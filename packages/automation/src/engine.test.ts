@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  decideAutoSend,
+  detectHumanEscalationIntent,
   isAutoReplyAllowed,
   isWithinWhatsAppWindow,
   canExecuteRule,
@@ -107,5 +109,42 @@ describe("automatic reply safety", () => {
       .toEqual({ allowed: false, reason: "conversation_limit" });
     expect(isAutoReplyAllowed({ conversationSent: 0, organizationSent: 20, conversationLimit: 1 }))
       .toEqual({ allowed: false, reason: "organization_rate_limit" });
+  });
+
+  it("requires explicit rule, assistant and conversation opt-in", () => {
+    const baseDecision = {
+      ruleAutoSend: true,
+      assistantAutoReplyEnabled: true,
+      conversationAiStatus: "active",
+      conversationPaused: false,
+      knowledgeSufficient: true,
+      sensitiveIntent: false
+    };
+
+    expect(decideAutoSend(baseDecision)).toEqual({ allowed: true, reason: "ready" });
+    expect(decideAutoSend({ ...baseDecision, ruleAutoSend: false })).toEqual({ allowed: false, reason: "draft_mode" });
+    expect(decideAutoSend({ ...baseDecision, assistantAutoReplyEnabled: false }))
+      .toEqual({ allowed: false, reason: "assistant_auto_reply_disabled" });
+    expect(decideAutoSend({ ...baseDecision, conversationAiStatus: "human" }))
+      .toEqual({ allowed: false, reason: "conversation_not_automatic" });
+  });
+
+  it("blocks paused, insufficient and sensitive conversations", () => {
+    const baseDecision = {
+      ruleAutoSend: true,
+      assistantAutoReplyEnabled: true,
+      conversationAiStatus: "active",
+      conversationPaused: false,
+      knowledgeSufficient: true,
+      sensitiveIntent: false
+    };
+
+    expect(decideAutoSend({ ...baseDecision, conversationPaused: true }))
+      .toEqual({ allowed: false, reason: "conversation_paused" });
+    expect(decideAutoSend({ ...baseDecision, knowledgeSufficient: false }))
+      .toEqual({ allowed: false, reason: "knowledge_insufficient" });
+    expect(decideAutoSend({ ...baseDecision, sensitiveIntent: true }))
+      .toEqual({ allowed: false, reason: "human_escalation_required" });
+    expect(detectHumanEscalationIntent("Estoy enojado, quiero hacer un reclamo legal por el pago.")).toBe(true);
   });
 });

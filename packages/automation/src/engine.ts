@@ -192,3 +192,57 @@ export function isAutoReplyAllowed({
   if (organizationSent >= organizationLimit) return { allowed: false, reason: "organization_rate_limit" };
   return { allowed: true, reason: null };
 }
+
+export function detectHumanEscalationIntent(text: string) {
+  const normalized = text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  const patterns = [
+    /\babogad/,
+    /\bdemanda\b/,
+    /\blegal\b/,
+    /\bdenuncia\b/,
+    /\bestafa\b/,
+    /\breclamo\b/,
+    /\bqueja\b/,
+    /\benojad/,
+    /\bfurios/,
+    /\bcancelar\b/,
+    /\bdar de baja\b/,
+    /\bdevolucion\b/,
+    /\bpago\b/,
+    /\btransferencia\b/,
+    /\bprecio\b/,
+    /\bcuota\b/,
+    /\bdeuda\b/,
+    /\burgente\b/
+  ];
+
+  return patterns.some((pattern) => pattern.test(normalized));
+}
+
+export function decideAutoSend({
+  ruleAutoSend,
+  assistantAutoReplyEnabled,
+  conversationAiStatus,
+  conversationPaused,
+  knowledgeSufficient,
+  sensitiveIntent
+}: {
+  ruleAutoSend: boolean;
+  assistantAutoReplyEnabled: boolean;
+  conversationAiStatus: string | null | undefined;
+  conversationPaused: boolean | null | undefined;
+  knowledgeSufficient: boolean;
+  sensitiveIntent: boolean;
+}) {
+  if (!ruleAutoSend) return { allowed: false, reason: "draft_mode" };
+  if (!assistantAutoReplyEnabled) return { allowed: false, reason: "assistant_auto_reply_disabled" };
+  if (conversationPaused || conversationAiStatus === "paused") return { allowed: false, reason: "conversation_paused" };
+  if (conversationAiStatus !== "active") return { allowed: false, reason: "conversation_not_automatic" };
+  if (!knowledgeSufficient) return { allowed: false, reason: "knowledge_insufficient" };
+  if (sensitiveIntent) return { allowed: false, reason: "human_escalation_required" };
+
+  return { allowed: true, reason: "ready" };
+}

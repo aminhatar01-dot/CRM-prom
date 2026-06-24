@@ -4,6 +4,8 @@ import { VariableExtractor } from "@crm-pro-ai/ai/variable-extractor";
 import { WhatsAppCloudError, WhatsAppCloudService } from "@crm-pro-ai/integrations/whatsapp-cloud-service";
 import {
   conditionsMatch,
+  decideAutoSend,
+  detectHumanEscalationIntent,
   isAutoReplyAllowed,
   isWithinWhatsAppWindow,
   type AutomationContext
@@ -325,6 +327,14 @@ async function generateDraft(
   if (!run.conversation_id || !run.message_id) {
     return { skipped: true, reason: "minimum_context_missing" };
   }
+  const { data: triggerMessage } = await supabase.from("messages")
+    .select("direction, sender_type")
+    .eq("id", run.message_id)
+    .eq("organization_id", run.organization_id)
+    .maybeSingle<{ direction: string; sender_type: string | null }>();
+  if (triggerMessage?.direction !== "inbound" || triggerMessage.sender_type === "assistant") {
+    return { skipped: true, reason: "inbound_contact_message_required" };
+  }
   const { data: organization } = await supabase.from("organizations").select("name")
     .eq("id", run.organization_id).single<{ name: string }>();
   let assistantQuery = supabase.from("ai_assistants")
@@ -346,6 +356,21 @@ async function generateDraft(
   });
   aiContext.availableTools = await loadAvailableAITools(supabase, run.organization_id);
   const result = await new AIOrchestrator(getAIRuntimeConfig()).generateReply(aiContext);
+  const { data: conversationControl } = await supabase.from("conversations")
+    .select("id, ai_status, ai_paused, owner_id")
+    .eq("id", run.conversation_id)
+    .eq("organization_id", run.organization_id)
+    .maybeSingle<{ id: string; ai_status: string; ai_paused: boolean | null; owner_id: string | null }>();
+  const latestInbound = [...aiContext.messages].reverse().find((message) => message.direction === "inbound");
+  const sensitiveIntent = detectHumanEscalationIntent(latestInbound?.body ?? "");
+  const autoSendDecision = decideAutoSend({
+    ruleAutoSend: rule.auto_send,
+    assistantAutoReplyEnabled: assistantRow.auto_reply_enabled,
+    conversationAiStatus: conversationControl?.ai_status,
+    conversationPaused: conversationControl?.ai_paused,
+    knowledgeSufficient: result.knowledgeSufficient,
+    sensitiveIntent
+  });
   const { data: aiLog } = await supabase.from("ai_logs").insert({
     organization_id: run.organization_id,
     assistant_id: assistantRow.id,
@@ -360,7 +385,8 @@ async function generateDraft(
       source: "automation_draft",
       rule_id: rule.id,
       run_id: run.id,
-      human_confirmation_required: !rule.auto_send,
+      human_confirmation_required: !autoSendDecision.allowed,
+      auto_send_decision: autoSendDecision,
       knowledge_sources: result.sources,
       knowledge_sufficient: result.knowledgeSufficient
     })
@@ -381,14 +407,17 @@ async function generateDraft(
     token_usage: {
       ...usageMetadata(result.usage).usage,
       knowledge_sources: result.sources,
-      knowledge_sufficient: result.knowledgeSufficient
+      knowledge_sufficient: result.knowledgeSufficient,
+      auto_send_decision: autoSendDecision
     }
   }).select("id").single<{ id: string }>();
   if (error) throw error;
 
-  let autoSendResult: Record<string, unknown> = { attempted: false };
-  if (rule.auto_send) {
+  let autoSendResult: Record<string, unknown> = { attempted: false, decision: autoSendDecision };
+  if (autoSendDecision.allowed) {
     autoSendResult = await autoSendDraft(supabase, rule, run.organization_id, draft.id, run.conversation_id, result.output, context);
+  } else if (rule.auto_send && ["human_escalation_required", "knowledge_insufficient"].includes(autoSendDecision.reason)) {
+    await escalateToHuman(supabase, run, rule, autoSendDecision.reason, conversationControl?.owner_id ?? context.owner_id ?? null);
   }
   return {
     draft_id: draft.id,
@@ -396,6 +425,7 @@ async function generateDraft(
     model: result.model,
     mode: result.mode,
     token_usage: usageMetadata(result.usage).usage,
+    decision: autoSendDecision,
     auto_send: autoSendResult
   };
 }
@@ -446,6 +476,63 @@ async function autoSendDraft(
     return { attempted: true, blocked: true, reason: allowance.reason };
   }
   return sendDraft(supabase, organizationId, draftId, conversationId, body, null);
+}
+
+async function escalateToHuman(
+  supabase: SupabaseClient,
+  run: {
+    id: string;
+    organization_id: string;
+    conversation_id: string | null;
+    lead_id?: string | null;
+  },
+  rule: RuleRow,
+  reason: string,
+  ownerId: string | null,
+) {
+  if (!run.conversation_id) return;
+
+  const title = reason === "knowledge_insufficient"
+    ? "Revisar respuesta IA sin suficiente base interna"
+    : "Revisar conversacion sensible antes de responder";
+  await supabase.from("conversations").update({
+    ai_status: "human",
+    ai_paused: true
+  }).eq("id", run.conversation_id).eq("organization_id", run.organization_id);
+  await supabase.from("tasks").insert({
+    organization_id: run.organization_id,
+    lead_id: run.lead_id ?? null,
+    conversation_id: run.conversation_id,
+    owner_id: ownerId,
+    title,
+    description: `Automatizacion ${rule.name}: ${reason}`,
+    due_at: new Date().toISOString()
+  });
+  await supabase.from("internal_notifications").insert({
+    organization_id: run.organization_id,
+    user_id: ownerId,
+    title,
+    body: "Se genero un borrador, pero el agente automatico lo dejo para revision humana.",
+    entity_table: "conversations",
+    entity_id: run.conversation_id,
+    metadata: {
+      source: "controlled_ai_agent",
+      rule_id: rule.id,
+      run_id: run.id,
+      reason
+    }
+  });
+  await supabase.from("audit_logs").insert({
+    organization_id: run.organization_id,
+    action: "automation_ai_escalated_to_human",
+    entity_table: "conversations",
+    entity_id: run.conversation_id,
+    metadata: {
+      rule_id: rule.id,
+      run_id: run.id,
+      reason
+    }
+  });
 }
 
 export async function sendDraft(

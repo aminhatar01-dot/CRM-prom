@@ -32,7 +32,7 @@ function assistantPayload(formData: FormData) {
     fallback_message: value(formData, "fallback_message"),
     active: formData.get("active") === "on",
     channel_id: value(formData, "channel_id") || null,
-    auto_reply_enabled: false
+    auto_reply_enabled: formData.get("auto_reply_enabled") === "on"
   };
 }
 

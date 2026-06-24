@@ -15,6 +15,7 @@ type Assistant = {
   fallback_message: string;
   active: boolean;
   channel_id: string | null;
+  auto_reply_enabled: boolean;
 };
 
 export function AssistantForm({ assistant }: { assistant?: Assistant }) {
@@ -87,6 +88,15 @@ export function AssistantForm({ assistant }: { assistant?: Assistant }) {
       <label className="flex items-center gap-2 text-sm">
         <input name="active" type="checkbox" defaultChecked={assistant?.active ?? true} />
         Asistente activo
+      </label>
+      <label className="rounded-md border bg-amber-50 p-3 text-sm text-amber-950">
+        <span className="flex items-center gap-2 font-medium">
+          <input name="auto_reply_enabled" type="checkbox" defaultChecked={assistant?.auto_reply_enabled ?? false} />
+          Permitir respuestas automaticas
+        </span>
+        <span className="mt-1 block text-xs text-amber-800">
+          Solo funciona si una automatizacion activa tiene auto_send=true y la conversacion esta en modo IA automatica.
+        </span>
       </label>
       <SubmitButton>{assistant ? "Guardar cambios" : "Crear asistente"}</SubmitButton>
     </form>
