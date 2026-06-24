@@ -67,6 +67,13 @@ const archiveSchema = z.object({
   return_to: z.string().startsWith("/").max(300)
 });
 
+const conversationAIControlSchema = z.object({
+  id: z.string().uuid(),
+  ai_status: z.enum(["active", "paused", "human"]),
+  ai_paused: z.boolean().default(false),
+  return_to: z.string().startsWith("/").max(300)
+});
+
 export async function createLead(formData: FormData) {
   const parsed = leadInputSchema.safeParse(leadPayload(formData));
   if (!parsed.success) redirect("/leads/new?error=invalid");
@@ -366,6 +373,40 @@ export async function updateConversation(formData: FormData) {
   await audit("update_conversation", "conversations", id, organization.id);
   revalidatePath("/inbox");
   redirect(`/inbox?conversation=${id}`);
+}
+
+export async function updateConversationAIControl(formData: FormData) {
+  const parsed = conversationAIControlSchema.safeParse({
+    id: value(formData, "id"),
+    ai_status: value(formData, "ai_status"),
+    ai_paused: formData.get("ai_paused") === "true",
+    return_to: value(formData, "return_to") || "/inbox"
+  });
+  if (!parsed.success) redirect("/inbox?error=invalid-ai-mode");
+
+  const { supabase, user } = await requireUser();
+  const organization = await getActiveOrganization(supabase, user);
+  const { data, error } = await supabase
+    .from("conversations")
+    .update({
+      ai_status: parsed.data.ai_status,
+      ai_paused: parsed.data.ai_paused
+    })
+    .eq("id", parsed.data.id)
+    .eq("organization_id", organization.id)
+    .is("archived_at", null)
+    .select("id")
+    .maybeSingle<{ id: string }>();
+
+  if (error) redirect(addQueryParam(parsed.data.return_to, "error", actionErrorCode(error)));
+  if (!data) redirect(addQueryParam(parsed.data.return_to, "error", "not-found"));
+
+  await audit("update_conversation_ai_control", "conversations", parsed.data.id, organization.id, {
+    ai_status: parsed.data.ai_status,
+    ai_paused: parsed.data.ai_paused
+  });
+  revalidatePath("/inbox");
+  redirect(addQueryParam(parsed.data.return_to, "ai", parsed.data.ai_status));
 }
 
 export async function createMessage(formData: FormData) {

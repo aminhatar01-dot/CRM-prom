@@ -12,10 +12,11 @@ import {
   archiveMessage,
   createMessage,
   updateConversation,
+  updateConversationAIControl,
   updateMessage
 } from "@/app/actions/crm";
 import { createManualFollowUp } from "@/app/actions/automations";
-import { approveAutomationDraft, discardAutomationDraft } from "@/app/actions/automations";
+import { approveAutomationDraft, discardAutomationDraft, hideFailedAutomationDraft } from "@/app/actions/automations";
 import { suggestConversationReply } from "@/app/actions/ai";
 import { analyzeConversationSmartTags, assignSmartTag } from "@/app/actions/smart-tags";
 import { extractConversationVariables } from "@/app/actions/variables";
@@ -243,9 +244,9 @@ export default async function InboxPage({
     : { data: [] };
 
   return (
-    <section className="h-[calc(100vh-4rem)]">
+    <section className="h-[calc(100dvh-4rem)] min-h-[620px] overflow-hidden">
       <RealtimeRefresh organizationId={organization.id} />
-      <div className="grid h-full lg:grid-cols-[380px_1fr]">
+      <div className="grid h-full min-h-0 lg:grid-cols-[380px_minmax(0,1fr)]">
         <aside className="flex min-h-0 flex-col border-r bg-card">
           <div className="border-b p-4">
             <h1 className="text-xl font-semibold tracking-normal">Inbox</h1>
@@ -298,18 +299,21 @@ export default async function InboxPage({
             ) : null}
           </div>
         </aside>
-        <div className="flex min-h-0 flex-col bg-background">
+        <div className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-background" data-testid="inbox-conversation-panel">
           {selected ? (
             <>
-              <header className="flex items-center justify-between border-b bg-card px-5 py-4">
+              <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b bg-card px-5 py-4">
                 <div>
                   <h2 className="font-semibold">{conversationName(selected)}</h2>
+                  <p className={`mt-2 inline-flex rounded-md border px-2 py-1 text-xs ${aiModeClass(selected)}`}>
+                    {aiModeLabel(selected)}
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     {conversationPhone(selected) ?? "Sin telefono"} · {selected.status}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
-                <form action={updateConversation} className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                <form action={updateConversation} className="flex flex-wrap items-center gap-2">
                   <input type="hidden" name="id" value={selected.id} />
                   <select name="status" defaultValue={selected.status} className="h-9 rounded-md border bg-background px-2 text-xs">
                     {conversationStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
@@ -334,7 +338,7 @@ export default async function InboxPage({
                 </form>
                 </div>
               </header>
-              <div className="border-b bg-card px-5 py-3">
+              <div className="max-h-[min(42dvh,360px)] shrink-0 overflow-y-auto border-b bg-card px-5 py-3" data-testid="inbox-automation-panel">
                 <form action={suggestConversationReply} className="flex flex-wrap items-center gap-2">
                   <input type="hidden" name="conversation_id" value={selected.id} />
                   <select name="assistant_id" className="h-9 rounded-md border bg-background px-2 text-xs">
@@ -355,6 +359,39 @@ export default async function InboxPage({
                     </span>
                   ) : null}
                 </form>
+                <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border bg-background p-3 text-xs">
+                  <span className="font-medium">Agente IA:</span>
+                  <form action={updateConversationAIControl}>
+                    <input type="hidden" name="id" value={selected.id} />
+                    <input type="hidden" name="return_to" value={`/inbox?conversation=${selected.id}`} />
+                    <input type="hidden" name="ai_status" value="human" />
+                    <input type="hidden" name="ai_paused" value="false" />
+                    <Button type="submit" size="sm" variant={selected.ai_status === "human" && !selected.ai_paused ? "default" : "outline"}>
+                      Modo borrador
+                    </Button>
+                  </form>
+                  <form action={updateConversationAIControl}>
+                    <input type="hidden" name="id" value={selected.id} />
+                    <input type="hidden" name="return_to" value={`/inbox?conversation=${selected.id}`} />
+                    <input type="hidden" name="ai_status" value="active" />
+                    <input type="hidden" name="ai_paused" value="false" />
+                    <Button type="submit" size="sm" variant={selected.ai_status === "active" && !selected.ai_paused ? "default" : "outline"}>
+                      IA automatica
+                    </Button>
+                  </form>
+                  <form action={updateConversationAIControl}>
+                    <input type="hidden" name="id" value={selected.id} />
+                    <input type="hidden" name="return_to" value={`/inbox?conversation=${selected.id}`} />
+                    <input type="hidden" name="ai_status" value="paused" />
+                    <input type="hidden" name="ai_paused" value="true" />
+                    <Button type="submit" size="sm" variant={selected.ai_paused ? "default" : "outline"}>
+                      Pausar IA
+                    </Button>
+                  </form>
+                  <span className="text-muted-foreground">
+                    El autoenvio requiere asistente habilitado y automatizacion auto_send=true.
+                  </span>
+                </div>
                 {aiSuggestion?.output ? (
                   <div className="mt-3 rounded-md border bg-muted/60 p-3 text-sm">
                     <p className="mb-1 text-xs font-medium text-muted-foreground">Borrador IA para revision humana</p>
@@ -413,6 +450,15 @@ export default async function InboxPage({
                           <input type="hidden" name="draft_id" value={draft.id} />
                           <input type="hidden" name="return_to" value={`/inbox?conversation=${selected.id}`} />
                           <Button type="submit" size="sm" variant="outline">Descartar</Button>
+                        </form>
+                      </div>
+                    ) : null}
+                    {["failed", "blocked"].includes(draft.status) ? (
+                      <div className="mt-3">
+                        <form action={hideFailedAutomationDraft}>
+                          <input type="hidden" name="draft_id" value={draft.id} />
+                          <input type="hidden" name="return_to" value={`/inbox?conversation=${selected.id}`} />
+                          <Button type="submit" size="sm" variant="outline">Ocultar fallido</Button>
                         </form>
                       </div>
                     ) : null}
@@ -524,7 +570,7 @@ export default async function InboxPage({
                   <Button type="submit" size="sm" variant="outline">Crear tarea</Button>
                 </form>
               </div>
-              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-5">
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-5" data-testid="inbox-messages-scroll">
                 {(messages ?? []).map((message) => (
                   <div
                     key={message.id}
@@ -565,13 +611,19 @@ export default async function InboxPage({
                   </div>
                 ) : null}
               </div>
-              <footer className="border-t bg-card p-4">
+              <footer className="shrink-0 border-t bg-card p-4">
                 <form action={createMessage} className="flex gap-2">
                   <input type="hidden" name="conversation_id" value={selected.id} />
                   <input type="hidden" name="direction" value="outbound" />
                   <input type="hidden" name="channel" value={selected.channel} />
                   <input type="hidden" name="status" value="sent" />
-                  <Input name="body" placeholder="Escribir mensaje manual" autoComplete="off" />
+                  <Input
+                    name="body"
+                    placeholder="Escribir mensaje manual"
+                    autoComplete="off"
+                    className="min-w-0 flex-1"
+                    data-testid="inbox-message-input"
+                  />
                   <Button type="submit" size="icon" aria-label="Enviar mensaje">
                     <SendHorizontal className="size-4" />
                   </Button>
@@ -625,6 +677,18 @@ function conversationPhone(conversation: ConversationRow) {
 function formatVariableValue(value: unknown) {
   if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value);
   return JSON.stringify(value);
+}
+
+function aiModeLabel(conversation: Pick<ConversationRow, "ai_status" | "ai_paused">) {
+  if (conversation.ai_paused || conversation.ai_status === "paused") return "IA pausada";
+  if (conversation.ai_status === "active") return "IA automatica";
+  return "Modo humano / borrador";
+}
+
+function aiModeClass(conversation: Pick<ConversationRow, "ai_status" | "ai_paused">) {
+  if (conversation.ai_paused || conversation.ai_status === "paused") return "border-amber-200 bg-amber-50 text-amber-800";
+  if (conversation.ai_status === "active") return "border-emerald-200 bg-emerald-50 text-emerald-800";
+  return "border-slate-200 bg-slate-50 text-slate-700";
 }
 
 function knowledgeSources(metadata: Record<string, unknown> | null) {

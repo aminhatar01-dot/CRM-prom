@@ -328,6 +328,29 @@ export async function discardAutomationDraft(formData: FormData) {
   redirect(addQueryParam(returnTo, "draft", "discarded"));
 }
 
+export async function hideFailedAutomationDraft(formData: FormData) {
+  const draftId = value(formData, "draft_id");
+  const returnTo = value(formData, "return_to") || "/inbox";
+  const { supabase, user } = await requireUser();
+  const organization = await getActiveOrganization(supabase, user);
+  const { data, error } = await supabase.from("automation_drafts").update({
+    status: "discarded",
+    approved_by: user.id,
+    approved_at: new Date().toISOString()
+  }).eq("id", draftId)
+    .eq("organization_id", organization.id)
+    .in("status", ["failed", "blocked"])
+    .select("id")
+    .maybeSingle<{ id: string }>();
+
+  if (error) redirect(addQueryParam(returnTo, "error", actionErrorCode(error)));
+  if (!data) redirect(addQueryParam(returnTo, "error", "draft-not-found"));
+
+  await audit("hide_failed_automation_draft", "automation_drafts", draftId, organization.id);
+  revalidatePath("/inbox");
+  redirect(addQueryParam(returnTo, "draft", "hidden"));
+}
+
 export async function createManualFollowUp(formData: FormData) {
   const returnTo = value(formData, "return_to") || "/leads";
   const { supabase, user } = await requireUser();
