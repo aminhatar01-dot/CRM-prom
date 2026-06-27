@@ -4,6 +4,12 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { assistantFormSchema, assistantTestSchema } from "@crm-pro-ai/ai/assistant";
+import {
+  agentConfigSchema,
+  agentPlaybooksSchema,
+  buildAgentRuntime,
+  linesToList
+} from "@crm-pro-ai/ai/agent-config";
 import { AIOrchestrator } from "@crm-pro-ai/ai/orchestrator";
 import { requireUser } from "@/lib/auth";
 import { actionErrorCode } from "@/lib/action-errors";
@@ -22,22 +28,75 @@ function value(formData: FormData, key: string) {
 }
 
 function assistantPayload(formData: FormData) {
+  const agentConfig = agentConfigSchema.parse({
+    agent_name: value(formData, "agent_name"),
+    role: value(formData, "role"),
+    industry: value(formData, "industry"),
+    business_description: value(formData, "business_description"),
+    sells: value(formData, "sells"),
+    services: value(formData, "services"),
+    products: value(formData, "products"),
+    primary_goal: value(formData, "primary_goal"),
+    formality: value(formData, "formality"),
+    response_length: value(formData, "response_length"),
+    emoji_usage: value(formData, "emoji_usage"),
+    commercial_pace: value(formData, "commercial_pace"),
+    communication_style: value(formData, "communication_style"),
+    always_ask: linesToList(value(formData, "always_ask")),
+    never_invent: linesToList(value(formData, "never_invent")),
+    human_topics: linesToList(value(formData, "human_topics")),
+    create_task_when: linesToList(value(formData, "create_task_when")),
+    create_opportunity_when: linesToList(value(formData, "create_opportunity_when")),
+    create_appointment_when: linesToList(value(formData, "create_appointment_when")),
+    pause_ai_when: linesToList(value(formData, "pause_ai_when")),
+    auto_reply_when: linesToList(value(formData, "auto_reply_when")),
+    draft_only_when: linesToList(value(formData, "draft_only_when")),
+    knowledge_topics: linesToList(value(formData, "knowledge_topics"))
+  });
+  const playbooks = agentPlaybooksSchema.parse(
+    [
+      ["first_contact", "Primer contacto"],
+      ["follow_up", "Seguimiento"],
+      ["sales", "Ventas"],
+      ["support", "Soporte"],
+      ["collections", "Cobranza"],
+      ["scheduling", "Agenda"],
+      ["reservations", "Reservas"],
+      ["quote", "Presupuesto"],
+      ["after_sales", "Postventa"]
+    ].map(([key, name]) => ({
+      key,
+      name,
+      instructions: value(formData, `playbook_${key}`),
+      enabled: formData.get(`playbook_${key}_enabled`) === "on"
+    })).filter((playbook) => playbook.instructions || playbook.enabled),
+  );
+  const generated = buildAgentRuntime(agentConfig, playbooks);
   return {
-    name: value(formData, "name"),
-    description: value(formData, "description") || null,
-    prompt: value(formData, "prompt"),
-    objective: value(formData, "objective") || null,
-    tone: value(formData, "tone"),
-    rules: value(formData, "rules") || null,
+    name: agentConfig.agent_name,
+    description: agentConfig.business_description || null,
+    prompt: generated.prompt,
+    objective: generated.objective,
+    tone: generated.tone,
+    rules: generated.rules.join("\n") || "No inventar datos del negocio.",
     fallback_message: value(formData, "fallback_message"),
     active: formData.get("active") === "on",
     channel_id: value(formData, "channel_id") || null,
-    auto_reply_enabled: formData.get("auto_reply_enabled") === "on"
+    auto_reply_enabled: formData.get("auto_reply_enabled") === "on",
+    agent_config: agentConfig,
+    playbooks
   };
 }
 
 export async function createAssistant(formData: FormData) {
-  const parsed = assistantFormSchema.safeParse(assistantPayload(formData));
+  let payload: ReturnType<typeof assistantPayload>;
+  try {
+    payload = assistantPayload(formData);
+  } catch {
+    redirect("/assistants/new?error=invalid");
+  }
+  const { agent_config, playbooks, ...runtimePayload } = payload;
+  const parsed = assistantFormSchema.safeParse(runtimePayload);
   if (!parsed.success) redirect("/assistants/new?error=invalid");
 
   const { supabase, user } = await requireUser();
@@ -46,6 +105,8 @@ export async function createAssistant(formData: FormData) {
     .from("ai_assistants")
     .insert({
       ...parsed.data,
+      agent_config,
+      playbooks,
       organization_id: organization.id,
       rules: parsed.data.rules ? parsed.data.rules.split("\n").filter(Boolean) : [],
       enabled: parsed.data.active
@@ -63,7 +124,14 @@ export async function createAssistant(formData: FormData) {
 export async function updateAssistant(formData: FormData) {
   const id = value(formData, "id");
   const parsedId = assistantIdSchema.safeParse({ id });
-  const parsed = assistantFormSchema.safeParse(assistantPayload(formData));
+  let payload: ReturnType<typeof assistantPayload>;
+  try {
+    payload = assistantPayload(formData);
+  } catch {
+    redirect(`/assistants/${id}/edit?error=invalid`);
+  }
+  const { agent_config, playbooks, ...runtimePayload } = payload;
+  const parsed = assistantFormSchema.safeParse(runtimePayload);
   if (!parsed.success || !parsedId.success) redirect(`/assistants/${id}/edit?error=invalid`);
 
   const { supabase, user } = await requireUser();
@@ -72,6 +140,8 @@ export async function updateAssistant(formData: FormData) {
     .from("ai_assistants")
     .update({
       ...parsed.data,
+      agent_config,
+      playbooks,
       rules: parsed.data.rules ? parsed.data.rules.split("\n").filter(Boolean) : [],
       enabled: parsed.data.active
     })

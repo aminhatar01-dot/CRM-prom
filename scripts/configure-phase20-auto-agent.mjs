@@ -61,6 +61,38 @@ const improvedPrompt = [
   "Manten respuestas breves para WhatsApp, sin listas largas, markdown excesivo ni abuso de negritas."
 ].join("\n");
 
+const agentConfig = {
+  agent_name: "InmoCRM",
+  role: "asesor inmobiliario",
+  industry: "inmobiliaria",
+  business_description: "Atencion comercial inmobiliaria de Amin Valentin.",
+  sells: "propiedades",
+  services: "asesoramiento para compra y alquiler de inmuebles",
+  products: "propiedades cargadas en la Base de Conocimiento",
+  primary_goal: "Responder consultas inmobiliarias con contexto real, calificar la oportunidad y avanzar al siguiente paso comercial.",
+  formality: "close",
+  response_length: "very_short",
+  emoji_usage: "low",
+  commercial_pace: "consultative",
+  communication_style: "friendly",
+  always_ask: ["operacion", "zona", "dormitorios", "presupuesto", "visita"],
+  never_invent: ["propiedades", "precios", "disponibilidad", "horarios", "condiciones"],
+  human_topics: ["reclamos", "pagos", "temas legales", "informacion sensible"],
+  create_task_when: ["el cliente solicite seguimiento humano"],
+  create_opportunity_when: ["el cliente confirme necesidad y presupuesto"],
+  create_appointment_when: ["el cliente quiera visitar una propiedad"],
+  pause_ai_when: ["el cliente pida hablar con una persona"],
+  auto_reply_when: ["la consulta tenga contexto suficiente y datos confirmados"],
+  draft_only_when: ["falte inventario o se requiera validacion humana"],
+  knowledge_topics: ["inventario", "precios", "zonas", "caracteristicas", "condiciones", "preguntas frecuentes"]
+};
+
+const playbooks = [
+  { key: "first_contact", name: "Primer contacto", enabled: true, instructions: "Saludar y detectar si busca alquilar, comprar o consultar una propiedad puntual." },
+  { key: "follow_up", name: "Seguimiento", enabled: true, instructions: "Retomar la busqueda sin repetir todo y pedir un unico dato faltante." },
+  { key: "sales", name: "Ventas", enabled: true, instructions: "Usar inventario real y avanzar hacia una visita cuando exista una opcion adecuada." }
+];
+
 const { error: updateAssistantError } = await supabase
   .from("ai_assistants")
   .update({
@@ -77,6 +109,8 @@ const { error: updateAssistantError } = await supabase
       "Variar la redaccion y evitar respuestas repetitivas.",
       "Escalar a humano si hay reclamos, pagos, temas legales o falta informacion sensible."
     ],
+    agent_config: agentConfig,
+    playbooks,
     fallback_message: "Gracias por escribir. Lo reviso con el equipo y te respondemos con informacion precisa."
   })
   .eq("id", assistant.id)

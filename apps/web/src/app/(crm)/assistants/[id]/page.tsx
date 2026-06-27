@@ -7,6 +7,7 @@ import { Label } from "@crm-pro-ai/ui/label";
 import { archiveAssistant, runAssistantTest } from "@/app/actions/ai";
 import { requireUser } from "@/lib/auth";
 import { getActiveOrganization } from "@/lib/organization";
+import type { AgentConfig, AgentPlaybook } from "@crm-pro-ai/ai/agent-config";
 
 type AssistantDetail = {
   id: string;
@@ -20,6 +21,8 @@ type AssistantDetail = {
   active: boolean;
   channel_id: string | null;
   auto_reply_enabled: boolean;
+  agent_config: AgentConfig | null;
+  playbooks: AgentPlaybook[] | null;
 };
 
 type AssistantTest = {
@@ -53,7 +56,7 @@ export default async function AssistantDetailPage({
   const [{ data: assistant }, { data: tests }, { data: conversations }] = await Promise.all([
       supabase
       .from("ai_assistants")
-      .select("id, name, description, prompt, objective, tone, rules, fallback_message, active, channel_id, auto_reply_enabled")
+      .select("id, name, description, objective, tone, rules, fallback_message, active, channel_id, auto_reply_enabled, agent_config, playbooks")
       .eq("id", id)
       .eq("organization_id", organization.id)
       .is("archived_at", null)
@@ -113,12 +116,10 @@ export default async function AssistantDetailPage({
             <Info label="Estado" value={assistant.active ? "active" : "inactive"} />
             <Info label="Auto respuesta" value={assistant.auto_reply_enabled ? "habilitada" : "desactivada"} />
             <Info label="Fallback" value={assistant.fallback_message} />
-            <div>
-              <p className="text-muted-foreground">Reglas</p>
-              <pre className="mt-1 whitespace-pre-wrap rounded-md bg-muted p-3 text-xs">
-                {(assistant.rules ?? []).join("\n") || "Sin reglas"}
-              </pre>
-            </div>
+            <Info label="Rol" value={assistant.agent_config?.role ?? "Sin definir"} />
+            <Info label="Rubro" value={assistant.agent_config?.industry || "General"} />
+            <Info label="Estilo" value={assistant.agent_config?.communication_style ?? assistant.tone} />
+            <Info label="Playbooks activos" value={(assistant.playbooks ?? []).filter((item) => item.enabled).map((item) => item.name).join(", ") || "Sin playbooks"} />
           </CardContent>
         </Card>
         <Card>

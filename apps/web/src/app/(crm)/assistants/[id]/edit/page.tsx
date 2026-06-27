@@ -9,7 +9,7 @@ export default async function EditAssistantPage({ params }: { params: Promise<{ 
   const organization = await getActiveOrganization(supabase, user);
   const { data: assistant } = await supabase
     .from("ai_assistants")
-    .select("id, name, description, prompt, objective, tone, rules, fallback_message, active, channel_id, auto_reply_enabled")
+    .select("id, name, description, fallback_message, active, channel_id, auto_reply_enabled, agent_config, playbooks")
     .eq("id", id)
     .eq("organization_id", organization.id)
     .is("archived_at", null)
@@ -18,10 +18,10 @@ export default async function EditAssistantPage({ params }: { params: Promise<{ 
   if (!assistant) return <section className="p-6">Asistente no encontrado.</section>;
 
   return (
-    <section className="mx-auto max-w-3xl px-4 py-6 lg:px-6">
+    <section className="mx-auto max-w-5xl px-4 py-6 lg:px-6">
       <Card>
         <CardHeader>
-          <CardTitle>Editar asistente IA</CardTitle>
+          <CardTitle>Configuracion del Agente</CardTitle>
         </CardHeader>
         <CardContent>
           <AssistantForm assistant={assistant} />
