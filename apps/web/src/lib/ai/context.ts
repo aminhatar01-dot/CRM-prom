@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AIContext, AIMessageContext, AssistantConfig } from "@crm-pro-ai/ai/assistant";
+import { classifyConversationIntent } from "@crm-pro-ai/ai/conversation-intent";
 import { buildKnowledgeQuery, searchKnowledge } from "@/lib/knowledge/service";
 
 export type AssistantRow = {
@@ -84,16 +85,20 @@ export async function buildConversationAIContext({
   userInput?: string;
 }): Promise<AIContext> {
   if (!conversationId) {
+    const messages: AIMessageContext[] = userInput
+      ? [{ direction: "inbound", body: userInput, channel: assistant.channel_id ?? "manual", status: "delivered", created_at: new Date().toISOString() }]
+      : [];
+    const conversationIntent = classifyConversationIntent(messages);
     const context: AIContext = {
       organizationName,
       assistant,
-      messages: [],
-      userInput
+      messages,
+      userInput,
+      conversationIntent
     };
-    context.knowledge = await safeKnowledgeSearch(
-      organizationId,
-      buildKnowledgeQuery({ userInput, messages: [] }),
-    );
+    context.knowledge = conversationIntent.type === "simple_greeting"
+      ? []
+      : await safeKnowledgeSearch(organizationId, buildKnowledgeQuery({ userInput, messages }));
     return context;
   }
 
@@ -212,14 +217,19 @@ export async function buildConversationAIContext({
     variables: Array.from(variablesByKey.values()),
     userInput
   };
-  context.knowledge = await safeKnowledgeSearch(
-    organizationId,
-    buildKnowledgeQuery({
-      userInput,
-      messages: context.messages,
-      person: context.person
-    }),
-  );
+  context.conversationIntent = classifyConversationIntent(context.messages);
+  const latestInbound = [...context.messages].reverse().find((message) => message.direction === "inbound");
+  const knowledgeMessages = ["short_answer", "search_continuation"].includes(context.conversationIntent.type)
+    ? context.messages
+    : latestInbound
+      ? [latestInbound]
+      : [];
+  context.knowledge = context.conversationIntent.type === "simple_greeting"
+    ? []
+    : await safeKnowledgeSearch(
+        organizationId,
+        buildKnowledgeQuery({ userInput, messages: knowledgeMessages, person: context.person }),
+      );
   return context;
 }
 

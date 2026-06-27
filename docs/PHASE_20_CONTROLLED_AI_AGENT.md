@@ -17,6 +17,15 @@ Una respuesta automatica solo se envia si se cumplen todas estas condiciones:
 7. La respuesta IA tiene contexto suficiente de CRM/Base de Conocimiento.
 8. No se detecta intencion sensible o de escalamiento humano.
 
+## Comportamiento conversacional inmobiliario
+
+- `simple_greeting`: responde breve, no consulta inventario y no arrastra detalles de propiedades anteriores.
+- `short_answer`: usa la ultima pregunta del asesor; por ejemplo, `Alquilar` continua la calificacion anterior.
+- `search_continuation`: conserva el historial util de la busqueda activa.
+- `inventory_query`: consulta Base de Conocimiento y solo menciona propiedades presentes en las fuentes.
+- `new_query`: abre una consulta nueva sin mezclar automaticamente una busqueda anterior.
+- `ambiguous`: pide una aclaracion puntual sin inventar operacion, zona ni propiedad.
+
 Si una condicion falla, el sistema conserva el borrador pendiente para revision humana y registra la decision.
 
 ## Configuracion productiva aplicada

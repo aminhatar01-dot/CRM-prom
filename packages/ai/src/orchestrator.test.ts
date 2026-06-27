@@ -47,6 +47,82 @@ const context: AIContext = {
 };
 
 describe("AIOrchestrator", () => {
+  it("answers a simple greeting naturally without listing properties", async () => {
+    const orchestrator = new AIOrchestrator({ demoMode: true });
+    const result = await orchestrator.generateReply({
+      ...context,
+      messages: [{ ...context.messages[0], body: "Hola" }]
+    });
+
+    expect(result.mode).toBe("policy");
+    expect(result.output).toMatch(/alquilar|comprar/i);
+    expect(result.output).not.toMatch(/departamento|Roldan|dormitorio/i);
+    expect(result.knowledgeSufficient).toBe(true);
+  });
+
+  it("does not drag prior property details into a later greeting", async () => {
+    const orchestrator = new AIOrchestrator({ demoMode: true });
+    const messages: AIContext["messages"] = [
+      { ...context.messages[0], body: "Busco un departamento en Roldan" },
+      { ...context.messages[0], direction: "outbound", body: "Tengo uno de un dormitorio. ¿Buscas alquilar o comprar?" },
+      { ...context.messages[0], body: "Hola" }
+    ];
+    const greetingContext = { ...context, messages };
+
+    expect(orchestrator.buildContext(greetingContext)).not.toContain("un dormitorio");
+    const result = await orchestrator.generateReply(greetingContext);
+    expect(result.output).toContain("continuar");
+    expect(result.output).not.toMatch(/Roldan|dormitorio/i);
+  });
+
+  it("continues from a short answer to the previous commercial question", async () => {
+    const orchestrator = new AIOrchestrator({ demoMode: true });
+    const result = await orchestrator.generateReply({
+      ...context,
+      messages: [
+        { ...context.messages[0], direction: "outbound", body: "¿Buscas alquilar o comprar?" },
+        { ...context.messages[0], body: "Alquilar" }
+      ]
+    });
+
+    expect(result.output).toMatch(/alquilar/i);
+    expect(result.output).toMatch(/zona/i);
+  });
+
+  it("uses real knowledge for inventory questions and does not invent without it", async () => {
+    const orchestrator = new AIOrchestrator({ demoMode: true });
+    const inventoryContext: AIContext = {
+      ...context,
+      messages: [{ ...context.messages[0], body: "¿Qué propiedades tienen?" }],
+      knowledge: [{
+        documentId: "00000000-0000-4000-8000-000000000702",
+        title: "Inventario",
+        category: "propiedades",
+        content: "Casa de dos dormitorios en Funes, disponible para alquiler.",
+        score: 0.91
+      }]
+    };
+
+    const withInventory = await orchestrator.generateReply(inventoryContext);
+    expect(withInventory.output).toContain("Casa de dos dormitorios en Funes");
+    expect(withInventory.knowledgeSufficient).toBe(true);
+
+    const withoutInventory = await orchestrator.generateReply({ ...inventoryContext, knowledge: [] });
+    expect(withoutInventory.output).not.toMatch(/Roldan|un dormitorio/i);
+    expect(withoutInventory.output).toContain("No encuentro propiedades disponibles confirmadas");
+    expect(withoutInventory.knowledgeSufficient).toBe(false);
+  });
+
+  it("varies greeting wording while keeping the same commercial intent", async () => {
+    const orchestrator = new AIOrchestrator({ demoMode: true });
+    const hola = await orchestrator.generateReply({ ...context, messages: [{ ...context.messages[0], body: "Hola" }] });
+    const buenDia = await orchestrator.generateReply({ ...context, messages: [{ ...context.messages[0], body: "Buen dia" }] });
+
+    expect(hola.output).not.toBe(buenDia.output);
+    expect(hola.output).toMatch(/alquilar|comprar/i);
+    expect(buenDia.output).toMatch(/alquilar|comprar/i);
+  });
+
   it("builds CRM context with assistant, person and message history", () => {
     const orchestrator = new AIOrchestrator({ demoMode: true });
     const built = orchestrator.buildContext(context);

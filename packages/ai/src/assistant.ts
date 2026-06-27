@@ -77,4 +77,5 @@ export type AIContext = {
     score: number;
   }>;
   userInput?: string;
+  conversationIntent?: import("./conversation-intent").ConversationIntent;
 };
