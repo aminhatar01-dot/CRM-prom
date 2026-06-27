@@ -7,6 +7,7 @@ export type AIUsage = {
 export type OpenAIClientConfig = {
   apiKey?: string;
   model?: string;
+  temperature?: number;
   demoMode?: boolean;
   fetcher?: typeof fetch;
 };
@@ -32,12 +33,14 @@ export class OpenAIRequestError extends Error {
 export class OpenAIResponsesClient {
   readonly model: string;
   readonly demoMode: boolean;
+  private readonly temperature: number | undefined;
   private readonly apiKey?: string;
   private readonly fetcher: typeof fetch;
 
   constructor(config: OpenAIClientConfig = {}) {
     this.apiKey = config.apiKey;
     this.model = config.model ?? "gpt-5.2";
+    this.temperature = config.temperature;
     this.demoMode = config.demoMode ?? !config.apiKey;
     this.fetcher = config.fetcher ?? fetch;
   }
@@ -58,6 +61,7 @@ export class OpenAIResponsesClient {
     const payload = await this.request({
       model: this.model,
       store: false,
+      ...(typeof this.temperature === "number" ? { temperature: this.temperature } : {}),
       instructions: sanitizeAIText(instructions, 8_000),
       input: sanitizeAIText(input, 24_000)
     });
@@ -96,6 +100,7 @@ export class OpenAIResponsesClient {
     const payload = await this.request({
       model: this.model,
       store: false,
+      ...(typeof this.temperature === "number" ? { temperature: this.temperature } : {}),
       instructions: sanitizeAIText(instructions, 8_000),
       input: sanitizeAIText(input, 24_000),
       text: {

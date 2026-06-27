@@ -4,6 +4,7 @@ import { OpenAIResponsesClient, sanitizeAIText, type AIUsage } from "./openai-cl
 export type AIOrchestratorConfig = {
   apiKey?: string;
   model?: string;
+  temperature?: number;
   demoMode?: boolean;
   fetcher?: typeof fetch;
 };
@@ -72,6 +73,7 @@ export class AIOrchestrator {
       `Base de conocimiento interna:\n${knowledge || "Sin informacion interna relevante para esta consulta."}`,
       `Herramientas disponibles (solo listar, no ejecutar automaticamente):\n${tools || "Sin herramientas externas disponibles."}`,
       `Historial reciente:\n${history || "Sin mensajes previos."}`,
+      `Ultimo mensaje inbound: ${sanitizeAIText([...context.messages].reverse().find((message) => message.direction === "inbound")?.body ?? "Sin mensaje inbound.", 1_000)}`,
       `Entrada del operador: ${context.userInput ?? "Sugerir la proxima respuesta."}`
     ].join("\n\n");
   }
@@ -115,7 +117,11 @@ export class AIOrchestrator {
       "No inventes productos, precios, politicas, horarios, disponibilidad ni condiciones de la empresa.",
       "No menciones identificadores internos ni puntajes de similitud al cliente.",
       "No inventes datos de presupuesto, disponibilidad ni condiciones.",
-      "Redacta una sugerencia lista para que un humano la revise antes de enviar.",
+      "Redacta un mensaje final listo para enviar por WhatsApp, breve, natural y especifico para el ultimo mensaje recibido.",
+      "Usa el nombre de la persona solo cuando suene natural; no saludes igual en cada respuesta si ya hay una conversacion iniciada.",
+      "No repitas frases textuales de respuestas anteriores; varia la redaccion y responde la consulta concreta.",
+      "Haz como maximo una pregunta de avance comercial y que sea la mas util segun lo que falte: operacion, zona, presupuesto, fecha o preferencia.",
+      "Si falta informacion de negocio, pide exactamente el dato faltante o deriva a revision humana, sin respuestas genericas.",
       "No digas que eres una IA salvo que el prompt del asistente lo pida."
     ].join("\n");
   }

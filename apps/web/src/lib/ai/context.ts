@@ -139,7 +139,7 @@ export async function buildConversationAIContext({
         }
       : undefined;
 
-  const [{ data: assignedTags }, { data: leadVariables }, { data: conversationVariables }] = await Promise.all([
+  const [{ data: assignedLeadTags }, { data: assignedConversationTags }, { data: leadVariables }, { data: conversationVariables }] = await Promise.all([
     conversation?.lead_id
       ? supabase
           .from("lead_tags")
@@ -147,6 +147,11 @@ export async function buildConversationAIContext({
           .eq("organization_id", organizationId)
           .eq("lead_id", conversation.lead_id)
       : Promise.resolve({ data: [] }),
+    supabase
+      .from("conversation_smart_tags")
+      .select("tags(name, color, description)")
+      .eq("organization_id", organizationId)
+      .eq("conversation_id", conversationId),
     conversation?.lead_id
       ? supabase
           .from("lead_variables")
@@ -177,7 +182,7 @@ export async function buildConversationAIContext({
       confidence: row.confidence
     });
   }
-  const smartTags = (assignedTags ?? [])
+  const smartTags = [...(assignedLeadTags ?? []), ...(assignedConversationTags ?? [])]
     .map((row) => {
       const related = row.tags as unknown as
         | { name: string; color?: string; description?: string | null }

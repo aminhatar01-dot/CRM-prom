@@ -8,6 +8,7 @@ export function getAIRuntimeConfig() {
   return {
     apiKey: env.OPENAI_API_KEY,
     model: env.OPENAI_MODEL,
+    temperature: env.OPENAI_TEMPERATURE,
     demoMode: env.AI_DEMO_MODE
   };
 }

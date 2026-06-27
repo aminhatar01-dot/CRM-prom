@@ -30,4 +30,16 @@ describe("env validation", () => {
     expect(result.ok).toBe(false);
     expect(result.issues.join(" ")).toContain("OPENAI_API_KEY");
   });
+
+  it("validates OpenAI temperature range", () => {
+    const result = validateServerEnv({
+      NEXT_PUBLIC_SUPABASE_URL: "https://widehqbtmqiebaowidav.supabase.co",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon",
+      AI_DEMO_MODE: "true",
+      OPENAI_TEMPERATURE: "3"
+    } as NodeJS.ProcessEnv);
+
+    expect(result.ok).toBe(false);
+    expect(result.issues.join(" ")).toContain("OPENAI_TEMPERATURE");
+  });
 });

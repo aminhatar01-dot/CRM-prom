@@ -54,6 +54,7 @@ describe("AIOrchestrator", () => {
     expect(built).toContain("Asistente: Ventas");
     expect(built).toContain("Persona (lead): Ana Torres");
     expect(built).toContain("Hola, quiero conocer precios.");
+    expect(built).toContain("Ultimo mensaje inbound: Hola, quiero conocer precios.");
   });
 
   it("lists available tools in context without executing them", () => {
@@ -131,6 +132,7 @@ describe("AIOrchestrator", () => {
     const orchestrator = new AIOrchestrator({
       apiKey: "sk-test",
       model: "gpt-test",
+      temperature: 0.7,
       demoMode: false,
       fetcher
     });
@@ -142,7 +144,10 @@ describe("AIOrchestrator", () => {
     expect(result.usage.totalTokens).toBe(92);
     expect(fetcher).toHaveBeenCalledWith(
       "https://api.openai.com/v1/responses",
-      expect.objectContaining({ method: "POST" }),
+      expect.objectContaining({
+        method: "POST",
+        body: expect.stringContaining("\"temperature\":0.7")
+      }),
     );
   });
 });
