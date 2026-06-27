@@ -7,10 +7,13 @@ import {
   knowledgeDocumentSchema,
   knowledgeDocumentUpdateSchema
 } from "@crm-pro-ai/ai/knowledge";
+import { catalogFields, knowledgeImportSchema, type ColumnMapping } from "@crm-pro-ai/ai/knowledge-import";
 import { actionErrorCode } from "@/lib/action-errors";
 import { requireUser } from "@/lib/auth";
 import { indexKnowledgeDocument } from "@/lib/knowledge/service";
+import { processKnowledgeImport, validateKnowledgeFile } from "@/lib/knowledge/import-service";
 import { getActiveOrganization } from "@/lib/organization";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 function value(formData: FormData, key: string) {
   const formValue = formData.get(key);
@@ -134,6 +137,110 @@ export async function archiveKnowledgeDocument(formData: FormData) {
   redirect("/knowledge?success=archived");
 }
 
+export async function createKnowledgeImport(formData: FormData) {
+  const columnMapping = Object.fromEntries(
+    catalogFields.flatMap((field) => {
+      const column = value(formData, `column_${field}`).trim();
+      return column ? [[field, column]] : [];
+    }),
+  ) as ColumnMapping;
+  const parsed = knowledgeImportSchema.safeParse({
+    name: value(formData, "name"),
+    source_type: value(formData, "source_type"),
+    source_url: value(formData, "source_url") || null,
+    category: value(formData, "category") || "general",
+    column_mapping: columnMapping
+  });
+  if (!parsed.success) redirect("/knowledge/import?error=invalid");
+
+  const { supabase, user } = await requireUser();
+  const organization = await getActiveOrganization(supabase, user);
+  const fileValue = formData.get("file");
+  const file = fileValue instanceof File && fileValue.size > 0 ? fileValue : null;
+  const fileSource = ["csv", "xlsx", "pdf", "docx", "txt"].includes(parsed.data.source_type);
+  if (fileSource && !file) redirect("/knowledge/import?error=file-required");
+  if (file) {
+    try {
+      validateKnowledgeFile(file, parsed.data.source_type);
+    } catch {
+      redirect("/knowledge/import?error=unsafe-file");
+    }
+  }
+
+  const { data: source, error } = await supabase.from("knowledge_imports").insert({
+    organization_id: organization.id,
+    source_type: parsed.data.source_type,
+    name: parsed.data.name,
+    source_url: parsed.data.source_url,
+    original_file_name: file?.name ?? null,
+    mime_type: file?.type ?? null,
+    size_bytes: file?.size ?? null,
+    column_mapping: parsed.data.column_mapping,
+    metadata: { category: parsed.data.category, file_last_modified: file?.lastModified ?? null },
+    status: "pending",
+    created_by: user.id
+  }).select("id").single<{ id: string }>();
+  if (error || !source) redirect(`/knowledge/import?error=${actionErrorCode(error)}`);
+
+  if (file) {
+    const safeName = file.name.replace(/[^A-Za-z0-9._-]/g, "_").slice(-120);
+    const storagePath = `${organization.id}/${source.id}/${safeName}`;
+    const admin = createAdminClient();
+    const { error: uploadError } = await admin.storage.from("knowledge-imports")
+      .upload(storagePath, await file.arrayBuffer(), { contentType: file.type, upsert: false });
+    if (uploadError) {
+      await supabase.from("knowledge_imports").update({ status: "error", error_message: "No se pudo guardar el archivo original." })
+        .eq("id", source.id).eq("organization_id", organization.id);
+      redirect("/knowledge?error=import-storage");
+    }
+    await supabase.from("knowledge_imports").update({ storage_path: storagePath })
+      .eq("id", source.id).eq("organization_id", organization.id);
+  }
+
+  await audit(supabase, organization.id, user.id, "create_knowledge_import", source.id, { source_type: parsed.data.source_type });
+  try {
+    const result = await processKnowledgeImport(source.id, organization.id);
+    await audit(supabase, organization.id, user.id, "process_knowledge_import", source.id, result);
+  } catch {
+    revalidatePath("/knowledge");
+    redirect("/knowledge?error=import-processing");
+  }
+  revalidatePath("/knowledge");
+  redirect("/knowledge?success=imported");
+}
+
+export async function reindexKnowledgeImport(formData: FormData) {
+  const parsed = knowledgeDocumentIdSchema.safeParse({ id: value(formData, "id") });
+  if (!parsed.success) redirect("/knowledge?error=invalid");
+  const { supabase, user } = await requireUser();
+  const organization = await getActiveOrganization(supabase, user);
+  try {
+    const result = await processKnowledgeImport(parsed.data.id, organization.id);
+    await audit(supabase, organization.id, user.id, "reindex_knowledge_import", parsed.data.id, result);
+  } catch {
+    redirect("/knowledge?error=import-processing");
+  }
+  revalidatePath("/knowledge");
+  redirect("/knowledge?success=reindexed");
+}
+
+export async function archiveKnowledgeImport(formData: FormData) {
+  const parsed = knowledgeDocumentIdSchema.safeParse({ id: value(formData, "id") });
+  if (!parsed.success) redirect("/knowledge?error=invalid");
+  const { supabase, user } = await requireUser();
+  const organization = await getActiveOrganization(supabase, user);
+  const now = new Date().toISOString();
+  const { data, error } = await supabase.from("knowledge_imports")
+    .update({ archived_at: now }).eq("id", parsed.data.id).eq("organization_id", organization.id)
+    .is("archived_at", null).select("id").maybeSingle<{ id: string }>();
+  if (error || !data) redirect("/knowledge?error=not-found");
+  await supabase.from("knowledge_documents").update({ archived_at: now, active: false })
+    .eq("organization_id", organization.id).eq("import_id", parsed.data.id).is("archived_at", null);
+  await audit(supabase, organization.id, user.id, "archive_knowledge_import", parsed.data.id);
+  revalidatePath("/knowledge");
+  redirect("/knowledge?success=source-archived");
+}
+
 async function audit(
   supabase: Awaited<ReturnType<typeof requireUser>>["supabase"],
   organizationId: string,
@@ -151,4 +258,3 @@ async function audit(
     metadata
   });
 }
-

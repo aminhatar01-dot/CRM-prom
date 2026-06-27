@@ -15,6 +15,10 @@ type KnowledgeDocumentRow = {
   category: string;
   active: boolean;
   archived_at: string | null;
+  source_type: string;
+  source_file_name: string | null;
+  source_url: string | null;
+  source_metadata: Record<string, unknown>;
 };
 
 type MatchRow = {
@@ -30,7 +34,7 @@ export async function indexKnowledgeDocument(documentId: string, organizationId:
   const admin = createAdminClient();
   const { data: document, error: documentError } = await admin
     .from("knowledge_documents")
-    .select("id, organization_id, title, content, category, active, archived_at")
+    .select("id, organization_id, title, content, category, active, archived_at, source_type, source_file_name, source_url, source_metadata")
     .eq("id", documentId)
     .eq("organization_id", organizationId)
     .is("archived_at", null)
@@ -72,7 +76,10 @@ export async function indexKnowledgeDocument(documentId: string, organizationId:
         metadata: {
           title: document.title,
           category: document.category,
-          source_type: "manual"
+          source_type: document.source_type,
+          source_file_name: document.source_file_name,
+          source_url: document.source_url,
+          ...document.source_metadata
         },
         embedding: vectorLiteral(embedded.embeddings[index])
       })),
@@ -185,4 +192,3 @@ function safeIndexingError(error: unknown) {
   const message = error instanceof Error ? error.message : "Fallo de indexacion.";
   return message.replace(/sk-[A-Za-z0-9_-]+/g, "[redacted]").slice(0, 500);
 }
-
