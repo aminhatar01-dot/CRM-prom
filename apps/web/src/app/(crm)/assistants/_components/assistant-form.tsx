@@ -32,6 +32,12 @@ const defaultConfig: AgentConfig = {
   services: "",
   products: "",
   primary_goal: "Responder consultas y ayudar a convertir oportunidades.",
+  primary_intent: "general",
+  topics: [],
+  excluded_topics: [],
+  knowledge_categories: [],
+  routing_priority: 50,
+  is_default: false,
   formality: "professional",
   response_length: "normal",
   emoji_usage: "low",
@@ -100,6 +106,14 @@ export function AssistantForm({ assistant }: { assistant?: Assistant }) {
         <TextArea label="Servicios" name="services" defaultValue={config.services} rows={3} />
         <TextArea label="Productos" name="products" defaultValue={config.products} rows={4} />
         <TextArea label="Objetivo principal del agente" name="primary_goal" defaultValue={config.primary_goal} rows={3} required />
+        <div className="grid gap-4 md:grid-cols-2">
+          <Field label="Intencion principal" name="primary_intent" defaultValue={config.primary_intent} placeholder="ventas, soporte, agenda, cotizaciones..." required />
+          <Field label="Prioridad de routing (0-100)" name="routing_priority" defaultValue={String(config.routing_priority)} required />
+          <TextArea label="Temas que atiende, uno por linea" name="topics" defaultValue={config.topics.join("\n")} rows={4} />
+          <TextArea label="Temas que no atiende" name="excluded_topics" defaultValue={config.excluded_topics.join("\n")} rows={4} />
+          <TextArea label="Categorias de conocimiento prioritarias" name="knowledge_categories" defaultValue={config.knowledge_categories.join("\n")} rows={4} />
+          <label className="flex items-center gap-2 rounded-md border p-3 text-sm"><input type="checkbox" name="is_default" defaultChecked={config.is_default} />Usar como asistente por defecto cuando no haya certeza</label>
+        </div>
       </WizardSection>
 
       <WizardSection active={step === 2} title="¿Como queres que responda?" description="Elegí el estilo que mejor representa a tu equipo.">

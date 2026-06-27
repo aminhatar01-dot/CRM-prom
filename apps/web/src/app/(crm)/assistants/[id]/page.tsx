@@ -118,6 +118,10 @@ export default async function AssistantDetailPage({
             <Info label="Fallback" value={assistant.fallback_message} />
             <Info label="Rol" value={assistant.agent_config?.role ?? "Sin definir"} />
             <Info label="Rubro" value={assistant.agent_config?.industry || "General"} />
+            <Info label="Intencion principal" value={assistant.agent_config?.primary_intent || "general"} />
+            <Info label="Temas" value={assistant.agent_config?.topics.join(", ") || "Consultas generales"} />
+            <Info label="Prioridad de routing" value={String(assistant.agent_config?.routing_priority ?? 50)} />
+            <Info label="Asistente por defecto" value={assistant.agent_config?.is_default ? "si" : "no"} />
             <Info label="Estilo" value={assistant.agent_config?.communication_style ?? assistant.tone} />
             <Info label="Playbooks activos" value={(assistant.playbooks ?? []).filter((item) => item.enabled).map((item) => item.name).join(", ") || "Sin playbooks"} />
           </CardContent>

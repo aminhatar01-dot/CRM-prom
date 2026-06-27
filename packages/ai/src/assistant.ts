@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { agentConfigSchema, agentPlaybooksSchema } from "./agent-config";
 
 export const assistantTones = ["professional", "friendly", "direct", "warm"] as const;
 
@@ -13,7 +14,9 @@ export const assistantConfigSchema = z.object({
   fallback_message: z.string().min(2).max(1000),
   active: z.boolean().default(true),
   channel_id: z.string().max(80).optional().nullable(),
-  auto_reply_enabled: z.boolean().default(false)
+  auto_reply_enabled: z.boolean().default(false),
+  agent_config: agentConfigSchema.optional().nullable(),
+  playbooks: agentPlaybooksSchema.optional().nullable()
 });
 
 export type AssistantConfig = z.infer<typeof assistantConfigSchema>;

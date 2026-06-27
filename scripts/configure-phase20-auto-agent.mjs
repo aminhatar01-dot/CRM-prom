@@ -70,6 +70,12 @@ const agentConfig = {
   services: "asesoramiento para compra y alquiler de inmuebles",
   products: "propiedades cargadas en la Base de Conocimiento",
   primary_goal: "Responder consultas inmobiliarias con contexto real, calificar la oportunidad y avanzar al siguiente paso comercial.",
+  primary_intent: "ventas inmobiliarias",
+  topics: ["compra", "alquiler", "propiedades", "visitas", "consultas comerciales"],
+  excluded_topics: ["reclamos legales", "cobranzas"],
+  knowledge_categories: ["propiedades", "inventario", "precios"],
+  routing_priority: 70,
+  is_default: true,
   formality: "close",
   response_length: "very_short",
   emoji_usage: "low",
@@ -197,6 +203,7 @@ const { error: insertActionError } = await supabase
     position: 1,
     config: {
       assistant_id: assistant.id,
+      auto_route: true,
       instruction: "Responde con el contexto CRM, historial y Base de Conocimiento. Se especifico, natural y no inventes informacion."
     }
   });

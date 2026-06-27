@@ -21,6 +21,7 @@ import {
   usageMetadata
 } from "@/lib/ai/runtime";
 import { loadAvailableAITools } from "@/lib/ai/tools";
+import { selectAssistantForConversation } from "@/lib/ai/assistant-routing";
 import { getServerEnv } from "@/lib/env";
 import { getWhatsAppAccessToken } from "@/lib/whatsapp/token-store";
 
@@ -329,21 +330,31 @@ async function generateDraft(
     return { skipped: true, reason: "minimum_context_missing" };
   }
   const { data: triggerMessage } = await supabase.from("messages")
-    .select("direction, sender_type")
+    .select("direction, sender_type, body, channel")
     .eq("id", run.message_id)
     .eq("organization_id", run.organization_id)
-    .maybeSingle<{ direction: string; sender_type: string | null }>();
+    .maybeSingle<{ direction: string; sender_type: string | null; body: string; channel: string }>();
   if (triggerMessage?.direction !== "inbound" || triggerMessage.sender_type === "assistant") {
     return { skipped: true, reason: "inbound_contact_message_required" };
   }
   const { data: organization } = await supabase.from("organizations").select("name")
     .eq("id", run.organization_id).single<{ name: string }>();
   let assistantQuery = supabase.from("ai_assistants")
-    .select("id, organization_id, name, description, prompt, objective, tone, rules, fallback_message, active, channel_id, auto_reply_enabled")
-    .eq("organization_id", run.organization_id).eq("active", true).is("archived_at", null).limit(1);
-  if (config.assistant_id) assistantQuery = assistantQuery.eq("id", config.assistant_id);
+    .select("id, organization_id, name, description, prompt, objective, tone, rules, fallback_message, active, channel_id, auto_reply_enabled, agent_config")
+    .eq("organization_id", run.organization_id).eq("active", true).is("archived_at", null).limit(50);
+  if (config.assistant_id && config.auto_route !== true) assistantQuery = assistantQuery.eq("id", config.assistant_id);
   const { data: assistants } = await assistantQuery.returns<AssistantRow[]>();
-  const assistantRow = assistants?.[0];
+  const selection = config.auto_route === true || !config.assistant_id
+    ? await selectAssistantForConversation({
+        supabase,
+        organizationId: run.organization_id,
+        conversationId: run.conversation_id,
+        assistants: assistants ?? [],
+        message: triggerMessage.body,
+        channel: triggerMessage.channel
+      })
+    : { assistant: assistants?.[0] ?? null, decision: null };
+  const assistantRow = selection.assistant;
   if (!assistantRow) return { skipped: true, reason: "assistant_missing" };
 
   await enforceAIRateLimit(supabase, run.organization_id);
@@ -389,7 +400,8 @@ async function generateDraft(
       human_confirmation_required: !autoSendDecision.allowed,
       auto_send_decision: autoSendDecision,
       knowledge_sources: result.sources,
-      knowledge_sufficient: result.knowledgeSufficient
+      knowledge_sufficient: result.knowledgeSufficient,
+      assistant_routing: selection.decision
     })
   }).select("id").single<{ id: string }>();
 
@@ -409,7 +421,8 @@ async function generateDraft(
       ...usageMetadata(result.usage).usage,
       knowledge_sources: result.sources,
       knowledge_sufficient: result.knowledgeSufficient,
-      auto_send_decision: autoSendDecision
+      auto_send_decision: autoSendDecision,
+      assistant_routing: selection.decision
     }
   }).select("id").single<{ id: string }>();
   if (error) throw error;

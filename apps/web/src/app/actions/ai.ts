@@ -16,6 +16,7 @@ import { actionErrorCode } from "@/lib/action-errors";
 import { buildConversationAIContext, mapAssistant, type AssistantRow } from "@/lib/ai/context";
 import { enforceAIRateLimit, getAIRuntimeConfig, summarizeAIInput, usageMetadata } from "@/lib/ai/runtime";
 import { loadAvailableAITools } from "@/lib/ai/tools";
+import { selectAssistantForConversation } from "@/lib/ai/assistant-routing";
 import { getActiveOrganization } from "@/lib/organization";
 
 const assistantIdSchema = z.object({
@@ -37,6 +38,12 @@ function assistantPayload(formData: FormData) {
     services: value(formData, "services"),
     products: value(formData, "products"),
     primary_goal: value(formData, "primary_goal"),
+    primary_intent: value(formData, "primary_intent") || "general",
+    topics: linesToList(value(formData, "topics")),
+    excluded_topics: linesToList(value(formData, "excluded_topics")),
+    knowledge_categories: linesToList(value(formData, "knowledge_categories")),
+    routing_priority: Number(value(formData, "routing_priority") || 50),
+    is_default: formData.get("is_default") === "on",
     formality: value(formData, "formality"),
     response_length: value(formData, "response_length"),
     emoji_usage: value(formData, "emoji_usage"),
@@ -116,6 +123,8 @@ export async function createAssistant(formData: FormData) {
 
   if (error || !data) redirect(`/assistants/new?error=${actionErrorCode(error)}`);
 
+  if (agent_config.is_default) await clearOtherDefaultAssistants(supabase, organization.id, data.id);
+
   await writeAudit(supabase, user.id, organization.id, "create_assistant", data.id);
   revalidatePath("/assistants");
   redirect(`/assistants/${data.id}`);
@@ -154,6 +163,8 @@ export async function updateAssistant(formData: FormData) {
   if (error) redirect(`/assistants/${id}/edit?error=${actionErrorCode(error)}`);
   if (!updated) redirect(`/assistants/${id}/edit?error=not-found`);
 
+  if (agent_config.is_default) await clearOtherDefaultAssistants(supabase, organization.id, id);
+
   await writeAudit(supabase, user.id, organization.id, "update_assistant", id);
   revalidatePath("/assistants");
   revalidatePath(`/assistants/${id}`);
@@ -172,7 +183,7 @@ export async function runAssistantTest(formData: FormData) {
   const organization = await getActiveOrganization(supabase, user);
   const { data: assistantRow } = await supabase
     .from("ai_assistants")
-    .select("id, organization_id, name, description, prompt, objective, tone, rules, fallback_message, active, channel_id, auto_reply_enabled")
+    .select("id, organization_id, name, description, prompt, objective, tone, rules, fallback_message, active, channel_id, auto_reply_enabled, agent_config")
     .eq("id", parsed.data.assistant_id)
     .eq("organization_id", organization.id)
     .is("archived_at", null)
@@ -271,18 +282,26 @@ export async function suggestConversationReply(formData: FormData) {
   const organization = await getActiveOrganization(supabase, user);
   let assistantQuery = supabase
     .from("ai_assistants")
-    .select("id, organization_id, name, description, prompt, objective, tone, rules, fallback_message, active, channel_id, auto_reply_enabled")
+    .select("id, organization_id, name, description, prompt, objective, tone, rules, fallback_message, active, channel_id, auto_reply_enabled, agent_config")
     .eq("organization_id", organization.id)
     .eq("active", true)
     .is("archived_at", null)
-    .limit(1);
+    .limit(50);
 
   if (parsed.data.assistant_id) {
     assistantQuery = assistantQuery.eq("id", parsed.data.assistant_id);
   }
 
   const { data: assistants } = await assistantQuery.returns<AssistantRow[]>();
-  const assistantRow = assistants?.[0];
+  const selection = parsed.data.assistant_id
+    ? { assistant: assistants?.[0] ?? null, decision: null }
+    : await selectAssistantForConversation({
+        supabase,
+        organizationId: organization.id,
+        conversationId: parsed.data.conversation_id,
+        assistants: assistants ?? []
+      });
+  const assistantRow = selection.assistant;
   if (!assistantRow) redirect(`/inbox?conversation=${parsed.data.conversation_id}&error=no-assistant`);
 
   const runtime = getAIRuntimeConfig();
@@ -321,7 +340,8 @@ export async function suggestConversationReply(formData: FormData) {
           context_summary: summarizeAIInput(result.input),
           human_confirmation_required: true,
           knowledge_sources: result.sources,
-          knowledge_sufficient: result.knowledgeSufficient
+          knowledge_sufficient: result.knowledgeSufficient,
+          assistant_routing: selection.decision
         })
       })
       .select("id")
@@ -385,4 +405,19 @@ async function writeAudit(
     entity_table: "ai_assistants",
     entity_id: entityId
   });
+}
+
+async function clearOtherDefaultAssistants(
+  supabase: Awaited<ReturnType<typeof requireUser>>["supabase"],
+  organizationId: string,
+  selectedId: string,
+) {
+  const { data: others } = await supabase.from("ai_assistants").select("id, agent_config")
+    .eq("organization_id", organizationId).neq("id", selectedId).is("archived_at", null);
+  for (const row of others ?? []) {
+    const config = row.agent_config as Record<string, unknown> | null;
+    if (config?.is_default !== true) continue;
+    await supabase.from("ai_assistants").update({ agent_config: { ...config, is_default: false } })
+      .eq("id", row.id).eq("organization_id", organizationId);
+  }
 }

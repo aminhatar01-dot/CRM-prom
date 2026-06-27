@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AIContext, AIMessageContext, AssistantConfig } from "@crm-pro-ai/ai/assistant";
 import { classifyConversationIntent } from "@crm-pro-ai/ai/conversation-intent";
+import type { AgentConfig } from "@crm-pro-ai/ai/agent-config";
 import { buildKnowledgeQuery, searchKnowledge } from "@/lib/knowledge/service";
 
 export type AssistantRow = {
@@ -16,6 +17,7 @@ export type AssistantRow = {
   active: boolean;
   channel_id: string | null;
   auto_reply_enabled: boolean;
+  agent_config?: AgentConfig | null;
 };
 
 type ConversationContextRow = {
@@ -65,7 +67,8 @@ export function mapAssistant(row: AssistantRow): AssistantConfig {
     fallback_message: row.fallback_message,
     active: row.active,
     channel_id: row.channel_id,
-    auto_reply_enabled: row.auto_reply_enabled
+    auto_reply_enabled: row.auto_reply_enabled,
+    agent_config: row.agent_config
   };
 }
 
@@ -230,6 +233,14 @@ export async function buildConversationAIContext({
         organizationId,
         buildKnowledgeQuery({ userInput, messages: knowledgeMessages, person: context.person }),
       );
+  const preferredCategories = assistant.agent_config?.knowledge_categories ?? [];
+  if (preferredCategories.length && context.knowledge.length) {
+    const preferred = context.knowledge.filter((source) => preferredCategories.includes(source.category));
+    if (preferred.length) {
+      const remaining = context.knowledge.filter((source) => !preferredCategories.includes(source.category));
+      context.knowledge = [...preferred, ...remaining].slice(0, 5);
+    }
+  }
   return context;
 }
 
