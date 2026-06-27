@@ -19,6 +19,24 @@ Una respuesta automatica solo se envia si se cumplen todas estas condiciones:
 
 Si una condicion falla, el sistema conserva el borrador pendiente para revision humana y registra la decision.
 
+## Configuracion productiva aplicada
+
+El boton `IA automatica` de Inbox solo cambia el estado de la conversacion. Para que exista autoenvio real tambien debe existir una regla `message_received` con accion `generate_ai_draft` y `auto_send=true`.
+
+Comando idempotente:
+
+```bash
+npm run phase20:configure:auto-agent
+```
+
+El comando:
+
+- habilita `auto_reply_enabled=true` en el asistente WhatsApp configurado;
+- mejora el prompt comercial para WhatsApp;
+- crea o actualiza la regla `Auto respuesta IA WhatsApp`;
+- restringe esa regla a `conditions.channel='whatsapp'`, `conditions.ai_status='active'` y `conditions.ai_paused=false`;
+- deja la regla `Borrador IA para WhatsApp` en modo humano/borrador.
+
 ## Modos de conversacion
 
 Desde Inbox, cada conversacion muestra un indicador:
@@ -53,12 +71,13 @@ El panel de automatizaciones tiene scroll propio y altura maxima. El historial d
 
 ## Prueba en produccion
 
-1. Confirmar que el asistente elegido tenga `Permitir respuestas automaticas` activado.
-2. Confirmar que la automatizacion de WhatsApp tenga `auto_send=true`.
-3. Abrir Inbox y poner la conversacion en `IA automatica`.
-4. Enviar un WhatsApp inbound dentro de la ventana de 24 horas.
-5. Verificar en Inbox si se envio automaticamente o si quedo borrador por revision.
-6. Revisar `Historial de automatizaciones`, tareas y notificaciones si fue escalado.
+1. Ejecutar `npm run phase20:configure:auto-agent` si todavia no se aplico la configuracion.
+2. Confirmar que el asistente elegido tenga `Permitir respuestas automaticas` activado.
+3. Confirmar que la automatizacion `Auto respuesta IA WhatsApp` tenga `auto_send=true`.
+4. Abrir Inbox y poner la conversacion en `IA automatica`.
+5. Enviar un WhatsApp inbound dentro de la ventana de 24 horas.
+6. Verificar en Inbox si se envio automaticamente o si quedo borrador por revision.
+7. Revisar `Historial de automatizaciones`, tareas y notificaciones si fue escalado.
 
 ## Riesgos y limites
 
@@ -66,4 +85,3 @@ El panel de automatizaciones tiene scroll propio y altura maxima. El historial d
 - WhatsApp no permite mensajes libres fuera de la ventana de 24 horas.
 - Consultas sensibles deben ser atendidas por humano.
 - El token de WhatsApp y `OPENAI_API_KEY` nunca deben exponerse al frontend.
-

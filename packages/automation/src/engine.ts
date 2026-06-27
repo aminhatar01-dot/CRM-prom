@@ -11,6 +11,8 @@ export type AutomationContext = {
   conversation_id?: string | null;
   owner_id?: string | null;
   channel?: string | null;
+  ai_status?: string | null;
+  ai_paused?: boolean | null;
   lead_status?: string | null;
   smart_tag_id?: string | null;
   variable_id?: string | null;
@@ -36,6 +38,8 @@ export function parseJsonRecord(value: string, fallback: Record<string, unknown>
 
 export function conditionsMatch(conditions: Record<string, unknown>, context: AutomationContext) {
   if (conditions.channel && conditions.channel !== context.channel) return false;
+  if (conditions.ai_status && conditions.ai_status !== context.ai_status) return false;
+  if (typeof conditions.ai_paused === "boolean" && conditions.ai_paused !== Boolean(context.ai_paused)) return false;
   if (conditions.lead_status && conditions.lead_status !== context.lead_status) return false;
   if (conditions.smart_tag_id && conditions.smart_tag_id !== context.smart_tag_id) return false;
   if (conditions.variable_id && conditions.variable_id !== context.variable_id) return false;

@@ -32,15 +32,23 @@ describe("automation engine", () => {
   it("matches supported conditions", () => {
     expect(
       conditionsMatch(
-        { channel: "whatsapp", lead_status: "nuevo", minutes_without_response: 30 },
+        { channel: "whatsapp", ai_status: "active", ai_paused: false, lead_status: "nuevo", minutes_without_response: 30 },
         {
           organization_id: organizationId,
           channel: "whatsapp",
+          ai_status: "active",
+          ai_paused: false,
           lead_status: "nuevo",
           minutes_without_response: 45
         },
       ),
     ).toBe(true);
+    expect(
+      conditionsMatch(
+        { channel: "whatsapp", ai_status: "active", ai_paused: false },
+        { organization_id: organizationId, channel: "whatsapp", ai_status: "human", ai_paused: false },
+      ),
+    ).toBe(false);
   });
 
   it("schedules a pending automation run", () => {

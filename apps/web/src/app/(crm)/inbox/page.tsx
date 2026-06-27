@@ -79,6 +79,7 @@ type AutomationDraftRow = {
   error_message: string | null;
   auto_send_requested: boolean;
   model: string | null;
+  token_usage: Record<string, unknown> | null;
   created_at: string;
   automation_rules: { name: string } | null;
 };
@@ -224,7 +225,7 @@ export default async function InboxPage({
   const { data: automationDrafts } = selected
     ? await supabase
         .from("automation_drafts")
-        .select("id, body, status, error_message, auto_send_requested, model, created_at, automation_rules(name)")
+        .select("id, body, status, error_message, auto_send_requested, model, token_usage, created_at, automation_rules(name)")
         .eq("organization_id", organization.id)
         .eq("conversation_id", selected.id)
         .in("status", ["pending", "blocked", "failed"])
@@ -432,6 +433,11 @@ export default async function InboxPage({
                         {draft.error_message ? (
                           <p className="mt-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
                             {draft.error_message}
+                          </p>
+                        ) : null}
+                        {autoSendBlockReason(draft) ? (
+                          <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                            No se autoenvio: {autoSendBlockReason(draft)}
                           </p>
                         ) : null}
                       </div>
@@ -689,6 +695,23 @@ function aiModeClass(conversation: Pick<ConversationRow, "ai_status" | "ai_pause
   if (conversation.ai_paused || conversation.ai_status === "paused") return "border-amber-200 bg-amber-50 text-amber-800";
   if (conversation.ai_status === "active") return "border-emerald-200 bg-emerald-50 text-emerald-800";
   return "border-slate-200 bg-slate-50 text-slate-700";
+}
+
+function autoSendBlockReason(draft: Pick<AutomationDraftRow, "auto_send_requested" | "status" | "token_usage">) {
+  if (!draft.auto_send_requested && draft.status === "pending") return "la automatizacion esta en modo borrador";
+  const decision = draft.token_usage?.auto_send_decision;
+  if (!decision || typeof decision !== "object") return null;
+  const reason = (decision as { reason?: unknown }).reason;
+  if (typeof reason !== "string" || reason === "ready") return null;
+  const labels: Record<string, string> = {
+    draft_mode: "la regla no tiene auto_send activado",
+    assistant_auto_reply_disabled: "el asistente no tiene respuestas automaticas habilitadas",
+    conversation_paused: "la conversacion tiene la IA pausada",
+    conversation_not_automatic: "la conversacion no esta en IA automatica",
+    knowledge_insufficient: "falta contexto suficiente en la Base de Conocimiento",
+    human_escalation_required: "requiere revision humana por posible tema sensible"
+  };
+  return labels[reason] ?? reason;
 }
 
 function knowledgeSources(metadata: Record<string, unknown> | null) {

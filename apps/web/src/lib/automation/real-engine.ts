@@ -754,15 +754,26 @@ async function loadContext(supabase: SupabaseClient, event: EventInput): Promise
   let ownerId = event.ownerId ?? null;
   let leadStatus: string | null = null;
   let lastInboundAt: string | null = null;
+  let aiStatus: string | null = null;
+  let aiPaused: boolean | null = null;
   if (event.conversationId) {
     const { data: conversation } = await supabase.from("conversations")
-      .select("channel, lead_id, contact_id, owner_id")
+      .select("channel, lead_id, contact_id, owner_id, ai_status, ai_paused")
       .eq("id", event.conversationId).eq("organization_id", event.organizationId)
-      .single<{ channel: string; lead_id: string | null; contact_id: string | null; owner_id: string | null }>();
+      .single<{
+        channel: string;
+        lead_id: string | null;
+        contact_id: string | null;
+        owner_id: string | null;
+        ai_status: string | null;
+        ai_paused: boolean | null;
+      }>();
     channel = conversation?.channel ?? null;
     leadId = leadId ?? conversation?.lead_id ?? null;
     contactId = contactId ?? conversation?.contact_id ?? null;
     ownerId = ownerId ?? conversation?.owner_id ?? null;
+    aiStatus = conversation?.ai_status ?? null;
+    aiPaused = conversation?.ai_paused ?? null;
     const { data: inbound } = await supabase.from("messages").select("created_at")
       .eq("organization_id", event.organizationId).eq("conversation_id", event.conversationId)
       .eq("direction", "inbound").order("created_at", { ascending: false }).limit(1)
@@ -783,6 +794,8 @@ async function loadContext(supabase: SupabaseClient, event: EventInput): Promise
     message_id: event.messageId,
     owner_id: ownerId,
     channel,
+    ai_status: aiStatus,
+    ai_paused: aiPaused,
     lead_status: leadStatus,
     smart_tag_id: event.smartTagId,
     variable_id: event.variableId,

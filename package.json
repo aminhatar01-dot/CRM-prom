@@ -22,6 +22,7 @@
     "qa:ai:demo": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/phase14-functional-local.ps1 -PlaywrightConfig apps/web/phase16.playwright.config.ts",
     "qa:knowledge:remote": "node scripts/smoke-phase19-knowledge.mjs",
     "qa:whatsapp:signup": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/phase14-functional-local.ps1 -PlaywrightConfig apps/web/phase17.playwright.config.ts",
+    "phase20:configure:auto-agent": "node scripts/configure-phase20-auto-agent.mjs",
     "db:push": "npx supabase db push",
     "db:seed": "npx supabase db reset --local",
     "db:seed:remote": "npx supabase db push --linked --include-seed --yes",
