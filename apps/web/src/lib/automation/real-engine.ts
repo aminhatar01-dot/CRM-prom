@@ -3,6 +3,7 @@ import { AIOrchestrator } from "@crm-pro-ai/ai/orchestrator";
 import { VariableExtractor } from "@crm-pro-ai/ai/variable-extractor";
 import { WhatsAppCloudError, WhatsAppCloudService } from "@crm-pro-ai/integrations/whatsapp-cloud-service";
 import {
+  autoReplyLimitFallback,
   conditionsMatch,
   decideAutoSend,
   detectHumanEscalationIntent,
@@ -446,34 +447,54 @@ async function autoSendDraft(
     }).eq("id", draftId).eq("organization_id", organizationId);
     return { attempted: true, blocked: true, reason: "whatsapp_window_closed" };
   }
+  if (context.message_id) {
+    const { count: inboundReplyCount } = await supabase.from("automation_drafts")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", organizationId)
+      .eq("message_id", context.message_id)
+      .eq("status", "sent")
+      .eq("auto_send_requested", true);
+    if ((inboundReplyCount ?? 0) > 0) {
+      const fallback = autoReplyLimitFallback("inbound_already_replied");
+      await supabase.from("automation_drafts").update({
+        status: fallback.status,
+        error_message: fallback.errorMessage
+      }).eq("id", draftId).eq("organization_id", organizationId);
+      return { attempted: false, pending: true, reason: "inbound_already_replied" };
+    }
+  }
   const since = new Date(Date.now() - rule.auto_reply_window_minutes * 60_000).toISOString();
   const { count } = await supabase.from("automation_drafts").select("id", { count: "exact", head: true })
     .eq("organization_id", organizationId).eq("conversation_id", conversationId)
-    .eq("status", "sent").gte("created_at", since);
+    .eq("status", "sent").eq("auto_send_requested", true).gte("created_at", since);
   const conversationCount = count ?? 0;
   if (conversationCount >= rule.auto_reply_limit) {
+    const fallback = autoReplyLimitFallback("conversation_limit");
     await supabase.from("automation_drafts").update({
-      status: "blocked",
-      error_message: "Automatic reply limit reached."
+      status: fallback.status,
+      error_message: fallback.errorMessage
     }).eq("id", draftId).eq("organization_id", organizationId);
-    return { attempted: true, blocked: true, reason: "conversation_limit" };
+    return { attempted: false, pending: true, reason: "conversation_limit" };
   }
   const hourly = new Date(Date.now() - 60 * 60_000).toISOString();
   const { count: orgCount } = await supabase.from("automation_drafts").select("id", { count: "exact", head: true })
-    .eq("organization_id", organizationId).eq("status", "sent").gte("created_at", hourly);
+    .eq("organization_id", organizationId).eq("status", "sent")
+    .eq("auto_send_requested", true).gte("created_at", hourly);
   const allowance = isAutoReplyAllowed({
     conversationSent: conversationCount,
     organizationSent: orgCount ?? 0,
     conversationLimit: rule.auto_reply_limit
   });
   if (!allowance.allowed) {
+    const reason = allowance.reason === "organization_rate_limit"
+      ? "organization_rate_limit"
+      : "conversation_limit";
+    const fallback = autoReplyLimitFallback(reason);
     await supabase.from("automation_drafts").update({
-      status: "blocked",
-      error_message: allowance.reason === "organization_rate_limit"
-        ? "Organization automatic reply rate limit reached."
-        : "Automatic reply limit reached."
+      status: fallback.status,
+      error_message: fallback.errorMessage
     }).eq("id", draftId).eq("organization_id", organizationId);
-    return { attempted: true, blocked: true, reason: allowance.reason };
+    return { attempted: false, pending: true, reason };
   }
   return sendDraft(supabase, organizationId, draftId, conversationId, body, null);
 }

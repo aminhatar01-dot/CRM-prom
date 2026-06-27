@@ -3,6 +3,7 @@ import {
   decideAutoSend,
   detectHumanEscalationIntent,
   isAutoReplyAllowed,
+  autoReplyLimitFallback,
   isWithinWhatsAppWindow,
   canExecuteRule,
   conditionsMatch,
@@ -112,11 +113,30 @@ describe("automatic reply safety", () => {
     expect(isWithinWhatsAppWindow("2026-06-21T11:59:59.000Z", now)).toBe(false);
   });
 
-  it("blocks loops and organization rate excess", () => {
-    expect(isAutoReplyAllowed({ conversationSent: 1, organizationSent: 1, conversationLimit: 1 }))
+  it("allows natural multi-turn replies and blocks configured excess", () => {
+    expect(isAutoReplyAllowed({ conversationSent: 0, organizationSent: 0, conversationLimit: 5 }))
+      .toEqual({ allowed: true, reason: null });
+    expect(isAutoReplyAllowed({ conversationSent: 1, organizationSent: 1, conversationLimit: 5 }))
+      .toEqual({ allowed: true, reason: null });
+    expect(isAutoReplyAllowed({ conversationSent: 5, organizationSent: 5, conversationLimit: 5 }))
       .toEqual({ allowed: false, reason: "conversation_limit" });
-    expect(isAutoReplyAllowed({ conversationSent: 0, organizationSent: 20, conversationLimit: 1 }))
+    expect(isAutoReplyAllowed({ conversationSent: 0, organizationSent: 20, conversationLimit: 5 }))
       .toEqual({ allowed: false, reason: "organization_rate_limit" });
+  });
+
+  it("keeps a rate-limited response pending for human approval", () => {
+    expect(autoReplyLimitFallback("conversation_limit")).toMatchObject({
+      status: "pending",
+      errorMessage: expect.stringContaining("aprobacion manual")
+    });
+    expect(autoReplyLimitFallback("organization_rate_limit")).toMatchObject({
+      status: "pending",
+      errorMessage: expect.stringContaining("20 respuestas")
+    });
+    expect(autoReplyLimitFallback("inbound_already_replied")).toMatchObject({
+      status: "pending",
+      errorMessage: expect.stringContaining("ya recibio")
+    });
   });
 
   it("requires explicit rule, assistant and conversation opt-in", () => {

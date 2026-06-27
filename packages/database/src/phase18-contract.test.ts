@@ -46,5 +46,9 @@ describe("phase 18 real automation contracts", () => {
     expect(engine).toContain("isWithinWhatsAppWindow");
     expect(automationCore).toContain("organization_rate_limit");
     expect(engine).toContain("idempotencyKey");
+    expect(engine).toContain('triggerMessage?.direction !== "inbound"');
+    expect(engine).toContain('triggerMessage.sender_type === "assistant"');
+    expect(engine).toContain('status: fallback.status');
+    expect(automationCore).toContain('status: "pending" as const');
   });
 });

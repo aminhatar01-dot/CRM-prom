@@ -102,7 +102,7 @@ export function AutomationForm({ rule }: { rule?: AutomationFormRule }) {
             type="number"
             min={1}
             max={10}
-            defaultValue={rule?.auto_reply_limit ?? 1}
+              defaultValue={rule?.auto_reply_limit ?? 5}
           />
         </div>
         <div className="space-y-2">
@@ -113,7 +113,7 @@ export function AutomationForm({ rule }: { rule?: AutomationFormRule }) {
             type="number"
             min={1}
             max={1440}
-            defaultValue={rule?.auto_reply_window_minutes ?? 1440}
+              defaultValue={rule?.auto_reply_window_minutes ?? 30}
           />
         </div>
         <p className="text-xs text-muted-foreground md:col-span-3">

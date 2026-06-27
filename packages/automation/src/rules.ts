@@ -43,8 +43,8 @@ export const automationRuleSchema = z.object({
   trigger_type: z.enum(automationTriggerTypes),
   status: z.enum(automationRuleStatuses).default("draft"),
   auto_send: z.boolean().default(false),
-  auto_reply_limit: z.number().int().min(1).max(10).default(1),
-  auto_reply_window_minutes: z.number().int().min(1).max(1440).default(1440),
+  auto_reply_limit: z.number().int().min(1).max(10).default(5),
+  auto_reply_window_minutes: z.number().int().min(1).max(1440).default(30),
   trigger_config: jsonRecordSchema,
   conditions: jsonRecordSchema,
   actions: z.array(automationActionSchema).min(1).max(10)

@@ -197,6 +197,19 @@ export function isAutoReplyAllowed({
   return { allowed: true, reason: null };
 }
 
+export function autoReplyLimitFallback(
+  reason: "conversation_limit" | "organization_rate_limit" | "inbound_already_replied",
+) {
+  return {
+    status: "pending" as const,
+    errorMessage: reason === "inbound_already_replied"
+      ? "Este mensaje inbound ya recibio una respuesta automatica. El borrador requiere revision manual."
+      : reason === "organization_rate_limit"
+      ? "Limite de 20 respuestas automaticas por organizacion y hora alcanzado. El borrador requiere aprobacion manual."
+      : "Limite de respuestas automaticas de esta conversacion alcanzado. El borrador requiere aprobacion manual."
+  };
+}
+
 export function detectHumanEscalationIntent(text: string) {
   const normalized = text
     .normalize("NFD")

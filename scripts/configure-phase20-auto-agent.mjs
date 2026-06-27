@@ -107,8 +107,8 @@ const autoRulePayload = {
   status: "active",
   enabled: true,
   auto_send: true,
-  auto_reply_limit: 1,
-  auto_reply_window_minutes: 1440,
+  auto_reply_limit: 5,
+  auto_reply_window_minutes: 30,
   trigger_config: {},
   conditions: { channel: "whatsapp", ai_status: "active", ai_paused: false }
 };

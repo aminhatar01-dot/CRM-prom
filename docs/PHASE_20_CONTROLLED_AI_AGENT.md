@@ -13,7 +13,7 @@ Una respuesta automatica solo se envia si se cumplen todas estas condiciones:
 3. El asistente tiene `auto_reply_enabled=true`.
 4. La conversacion esta en `ai_status='active'` y `ai_paused=false`.
 5. Existe una ventana de WhatsApp abierta de 24 horas desde el ultimo mensaje inbound.
-6. No se excedio el limite por conversacion ni el rate limit por organizacion.
+6. No se excedio el limite de 5 respuestas por conversacion cada 30 minutos ni el limite de 20 respuestas por organizacion y hora.
 7. La respuesta IA tiene contexto suficiente de CRM/Base de Conocimiento.
 8. No se detecta intencion sensible o de escalamiento humano.
 
@@ -81,6 +81,8 @@ El panel de automatizaciones tiene scroll propio y altura maxima. El historial d
 
 ## Riesgos y limites
 
+- Cada mensaje inbound tiene una unica ejecucion idempotente. Un segundo mensaje real del cliente puede recibir una nueva respuesta.
+- Si se alcanza un limite, la respuesta queda como borrador pendiente para aprobacion manual en lugar de descartarse.
 - No activar `auto_send=true` en reglas amplias sin revisar prompts, RAG y limites.
 - WhatsApp no permite mensajes libres fuera de la ventana de 24 horas.
 - Consultas sensibles deben ser atendidas por humano.

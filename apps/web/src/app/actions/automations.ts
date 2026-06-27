@@ -48,8 +48,8 @@ function automationPayload(formData: FormData, organizationId: string) {
     trigger_type: value(formData, "trigger_type"),
     status: value(formData, "status") || "draft",
     auto_send: formData.get("auto_send") === "on",
-    auto_reply_limit: Number(value(formData, "auto_reply_limit") || 1),
-    auto_reply_window_minutes: Number(value(formData, "auto_reply_window_minutes") || 1440),
+    auto_reply_limit: Number(value(formData, "auto_reply_limit") || 5),
+    auto_reply_window_minutes: Number(value(formData, "auto_reply_window_minutes") || 30),
     trigger_config: parseJson(value(formData, "trigger_config"), {}),
     conditions: {
       ...parsedConditions,
