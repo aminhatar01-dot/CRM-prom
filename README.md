@@ -1,6 +1,28 @@
 # CRM PRO AI
 
-SaaS CRM multi tenant construido con Next.js 15, Supabase y OpenAI.
+SaaS CRM conversacional multi-tenant con IA, WhatsApp y automatizaciones.
+Stack: Next.js 15 · Supabase · OpenAI · TypeScript · pgvector.
+
+## Para agentes IA (Claude / Codex)
+
+| Herramienta | Leer primero |
+|---|---|
+| Claude Code | [`CLAUDE.md`](CLAUDE.md) |
+| Codex | [`CODEX.md`](CODEX.md) |
+| Cualquiera | [`docs/PROJECT_MANIFEST.md`](docs/PROJECT_MANIFEST.md) · [`docs/PHASE_INDEX.md`](docs/PHASE_INDEX.md) |
+
+**Rama de trabajo activa:** `feature/phase-26-ai-credits` (FASE 26 + 27 + 28 completadas)
+
+## Comandos de validación
+
+```bash
+npm run lint          # 0 errores, 0 warnings
+npm run test          # 332+ tests verdes
+npm run build         # build de producción
+npm run deploy:check  # 12 PASS, 2 WARN, 0 FAIL
+```
+
+---
 
 ## FASE 19
 
