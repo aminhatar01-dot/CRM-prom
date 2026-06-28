@@ -24,6 +24,7 @@ import { loadAvailableAITools } from "@/lib/ai/tools";
 import { selectAssistantForConversation } from "@/lib/ai/assistant-routing";
 import { getServerEnv } from "@/lib/env";
 import { getWhatsAppAccessToken } from "@/lib/whatsapp/token-store";
+import { createQuoteFromConversation, formatQuoteMessage } from "@/lib/quotes/service";
 
 type EventInput = {
   organizationId: string;
@@ -291,6 +292,31 @@ async function executeAction(
       output = { conversation_id: run.conversation_id, paused: true };
     } else if (action.action_type === "update_variable") {
       output = await updateVariable(supabase, run, action.config);
+    } else if (action.action_type === "create_quote" || action.action_type === "send_quote_draft") {
+      if (!run.conversation_id) throw new Error("Conversation context is required to create a quote.");
+      const result = await createQuoteFromConversation({ organizationId: run.organization_id, conversationId: run.conversation_id });
+      if (result.status === "clarification") {
+        output = { blocked: true, reason: result.reason, clarification: result.message };
+      } else if (action.action_type === "send_quote_draft") {
+        const { data: quote } = await supabase.from("quotes").select("id,quote_number,currency,total,expires_at,commercial_terms").eq("id", result.quoteId).eq("organization_id", run.organization_id).single<{ id: string; quote_number: string; currency: string; total: number; expires_at: string | null; commercial_terms: string | null }>();
+        const { data: items } = await supabase.from("quote_items").select("name,quantity,unit_price,line_total").eq("quote_id", result.quoteId).eq("organization_id", run.organization_id).order("position");
+        if (!quote || !items?.length) throw new Error("The generated quote could not be loaded.");
+        const body = formatQuoteMessage(quote, items ?? []);
+        const { data: draft, error } = await supabase.from("automation_drafts").insert({ organization_id: run.organization_id, rule_id: rule.id, run_id: run.id, conversation_id: run.conversation_id, source_message_id: run.message_id, body, status: "pending", auto_send_requested: false, metadata: { quote_id: result.quoteId, quote_number: result.quoteNumber } }).select("id").single<{ id: string }>();
+        if (error || !draft) throw error ?? new Error("The quote draft could not be created.");
+        output = { quote_id: result.quoteId, draft_id: draft.id, auto_send: false };
+      } else output = { quote_id: result.quoteId, quote_number: result.quoteNumber, status: "pending_approval" };
+    } else if (action.action_type === "mark_quote_sent") {
+      const quoteId = typeof action.config.quote_id === "string" ? action.config.quote_id : null;
+      if (!quoteId) throw new Error("quote_id is required.");
+      const { error } = await supabase.from("quotes").update({ status: "sent", sent_at: new Date().toISOString() }).eq("id", quoteId).eq("organization_id", run.organization_id);
+      if (error) throw error;
+      output = { quote_id: quoteId, status: "sent" };
+    } else if (action.action_type === "notify_quote_accepted") {
+      const quoteId = typeof action.config.quote_id === "string" ? action.config.quote_id : null;
+      const { data, error } = await supabase.from("internal_notifications").insert({ organization_id: run.organization_id, user_id: context.owner_id ?? null, title: "Cotizacion aceptada", body: "Una cotizacion requiere seguimiento comercial.", entity_table: "quotes", entity_id: quoteId, metadata: { rule_id: rule.id, run_id: run.id, quote_id: quoteId } }).select("id").single<{ id: string }>();
+      if (error) throw error;
+      output = { notification_id: data.id };
     } else {
       output = { skipped: true, reason: "unsupported_action" };
     }

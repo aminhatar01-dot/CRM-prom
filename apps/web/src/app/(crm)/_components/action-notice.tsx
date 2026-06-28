@@ -29,6 +29,13 @@ const errorMessages: Record<string, string> = {
   "draft-whatsapp-config": "No pudimos enviar el borrador porque WhatsApp no esta configurado para esta organizacion.",
   "draft-whatsapp-api": "WhatsApp rechazo el envio del borrador. Revisa el canal o intenta nuevamente.",
   "draft-send-failed": "No pudimos enviar el borrador IA. El error quedo registrado en la conversacion."
+  ,"quote-not_quote": "El ultimo mensaje no contiene una solicitud clara de cotizacion."
+  ,"quote-missing_product": "No encontramos un producto verificable en el catalogo."
+  ,"quote-missing_quantity": "Falta la cantidad solicitada. Preguntasela al cliente antes de cotizar."
+  ,"quote-ambiguous": "Hay varias coincidencias posibles. El cliente debe elegir una opcion."
+  ,"quote-missing_price": "El producto no tiene un precio verificable y requiere revision humana."
+  ,"quote-currency_mismatch": "Los items usan monedas diferentes y requieren revision humana."
+  ,"quote-failed": "No pudimos generar la cotizacion desde la conversacion."
 };
 
 const successMessages: Record<string, string> = {
@@ -36,6 +43,8 @@ const successMessages: Record<string, string> = {
   created: "Registro creado correctamente.",
   updated: "Cambios guardados correctamente.",
   indexed: "Documento indexado correctamente."
+  ,sent: "Cotizacion enviada por WhatsApp y registrada correctamente."
+  ,generated: "Cotizacion preliminar generada desde la conversacion."
 };
 
 export function ActionNotice() {

@@ -1,6 +1,7 @@
 import {
   Bot,
   BookOpen,
+  FileText,
   Braces,
   Columns3,
   LayoutDashboard,
@@ -20,6 +21,7 @@ export const mainNavigationItems = [
   { href: "/pipeline", label: "Pipeline", icon: Columns3, adminOnly: false },
   { href: "/contacts", label: "Contactos", icon: UsersRound, adminOnly: false },
   { href: "/inbox", label: "Inbox", icon: MessageSquareText, adminOnly: false },
+  { href: "/quotes", label: "Cotizaciones", icon: FileText, adminOnly: false },
   { href: "/assistants", label: "Asistentes", icon: Sparkles, adminOnly: true },
   { href: "/smart-tags", label: "Smart Tags", icon: Tags, adminOnly: true },
   { href: "/variables", label: "Variables", icon: Braces, adminOnly: true },

@@ -21,7 +21,11 @@ export const automationActionTypes = [
   "update_variable",
   "create_task",
   "pause_ai",
-  "notify_internal"
+  "notify_internal",
+  "create_quote",
+  "send_quote_draft",
+  "mark_quote_sent",
+  "notify_quote_accepted"
 ] as const;
 
 export const automationRuleStatuses = ["draft", "active", "paused", "archived"] as const;

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Archive, Bell, BookOpen, Bot, Braces, Search, SendHorizontal, Sparkles, Tags } from "lucide-react";
+import { Archive, Bell, BookOpen, Bot, Braces, FileText, Search, SendHorizontal, Sparkles, Tags } from "lucide-react";
 import {
   conversationAiStatuses,
   conversationChannels,
@@ -20,6 +20,7 @@ import { approveAutomationDraft, discardAutomationDraft, hideFailedAutomationDra
 import { suggestConversationReply } from "@/app/actions/ai";
 import { analyzeConversationSmartTags, assignSmartTag } from "@/app/actions/smart-tags";
 import { extractConversationVariables } from "@/app/actions/variables";
+import { createQuoteFromInbox } from "@/app/actions/quotes";
 import { requireUser } from "@/lib/auth";
 import { getActiveOrganization, getAssignableMembers } from "@/lib/organization";
 import { RealtimeRefresh } from "./_components/realtime-refresh";
@@ -446,7 +447,7 @@ export default async function InboxPage({
                       </span>
                     </div>
                     {draft.status === "pending" ? (
-                      <div className="mt-3 flex gap-2">
+                      <div className="mt-3 flex flex-wrap gap-2">
                         <form action={approveAutomationDraft}>
                           <input type="hidden" name="draft_id" value={draft.id} />
                           <input type="hidden" name="return_to" value={`/inbox?conversation=${selected.id}`} />
@@ -456,6 +457,10 @@ export default async function InboxPage({
                           <input type="hidden" name="draft_id" value={draft.id} />
                           <input type="hidden" name="return_to" value={`/inbox?conversation=${selected.id}`} />
                           <Button type="submit" size="sm" variant="outline">Descartar</Button>
+                        </form>
+                        <form action={createQuoteFromInbox}>
+                          <input type="hidden" name="conversation_id" value={selected.id} />
+                          <Button type="submit" size="sm" variant="outline"><FileText className="size-4" />Convertir en cotizacion</Button>
                         </form>
                       </div>
                     ) : null}
@@ -517,6 +522,10 @@ export default async function InboxPage({
                       <Braces className="size-4" />
                       Extraer variables con IA
                     </Button>
+                  </form>
+                  <form action={createQuoteFromInbox}>
+                    <input type="hidden" name="conversation_id" value={selected.id} />
+                    <Button type="submit" size="sm" variant="outline"><FileText className="size-4" />Crear cotizacion</Button>
                   </form>
                 </div>
                 {(conversationVariables ?? []).length > 0 ? (

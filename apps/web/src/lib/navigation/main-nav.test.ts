@@ -9,6 +9,7 @@ describe("main navigation smoke test", () => {
         "/leads",
         "/pipeline",
         "/inbox",
+        "/quotes",
         "/assistants",
         "/knowledge",
         "/integrations",
@@ -22,6 +23,7 @@ describe("main navigation smoke test", () => {
 
     expect(agentLinks).toContain("/inbox");
     expect(agentLinks).toContain("/pipeline");
+    expect(agentLinks).toContain("/quotes");
     expect(agentLinks).not.toContain("/integrations");
     expect(agentLinks).not.toContain("/settings/system-status");
   });
