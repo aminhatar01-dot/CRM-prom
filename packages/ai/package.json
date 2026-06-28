@@ -18,6 +18,7 @@
     "./variables": "./src/variables.ts",
     "./variable-extractor": "./src/variable-extractor.ts",
     "./quote-extractor": "./src/quote-extractor.ts",
-    "./assistant-templates": "./src/assistant-templates.ts"
+    "./assistant-templates": "./src/assistant-templates.ts",
+    "./onboarding-templates": "./src/onboarding-templates.ts"
   }
 }

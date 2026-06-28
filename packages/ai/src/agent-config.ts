@@ -30,6 +30,7 @@ export const agentConfigSchema = z.object({
   communication_style: z
     .enum(["friendly", "technical", "executive", "premium", "youthful"])
     .default("friendly"),
+  personality: z.string().trim().max(300).default(""),
   always_ask: textList,
   never_invent: textList,
   human_topics: textList,
@@ -146,6 +147,7 @@ export function buildAgentRuntime(
       ? `No atiendes estos temas y debes derivarlos: ${config.excluded_topics.join(", ")}.`
       : "",
     `Comunicate de forma ${labels.formality[config.formality]}, ${labels.style[config.communication_style]} y ${labels.pace[config.commercial_pace]}.`,
+    config.personality ? `Personalidad adicional: ${config.personality}.` : "",
     `Las respuestas deben ser ${labels.responseLength[config.response_length]}; ${labels.emoji[config.emoji_usage]}.`,
     "Responde como una persona real, varia la redaccion y pide solamente la informacion necesaria.",
     "Usa datos del CRM y la Base de Conocimiento. Nunca inventes datos del negocio, productos, servicios, precios, disponibilidad ni politicas.",
