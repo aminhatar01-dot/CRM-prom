@@ -27,6 +27,11 @@ import {
   summarizeAIInput,
   usageMetadata,
 } from "@/lib/ai/runtime";
+import {
+  checkCreditsOrThrow,
+  recordAIUsage,
+  InsufficientCreditsError,
+} from "@/lib/ai/credits";
 import { loadAvailableAITools } from "@/lib/ai/tools";
 import { selectAssistantForConversation } from "@/lib/ai/assistant-routing";
 import { getActiveOrganization } from "@/lib/organization";
@@ -271,8 +276,10 @@ export async function runAssistantTest(formData: FormData) {
   let testId = "";
   try {
     await enforceAIRateLimit(supabase, organization.id);
+    const estimatedMode = runtime.demoMode ? "demo" : "openai";
+    await checkCreditsOrThrow(supabase, organization.id, estimatedMode);
     const result = await orchestrator.generateReply(context);
-    await supabase.from("ai_logs").insert({
+    const { data: log } = await supabase.from("ai_logs").insert({
       organization_id: organization.id,
       assistant_id: parsed.data.assistant_id,
       conversation_id: parsed.data.conversation_id,
@@ -289,6 +296,17 @@ export async function runAssistantTest(formData: FormData) {
         knowledge_sources: result.sources,
         knowledge_sufficient: result.knowledgeSufficient,
       }),
+    }).select("id").single<{ id: string }>();
+    await recordAIUsage(supabase, {
+      organizationId: organization.id,
+      assistantId: parsed.data.assistant_id,
+      conversationId: parsed.data.conversation_id,
+      userId: user.id,
+      aiLogId: log?.id ?? null,
+      model: result.model,
+      usage: result.usage,
+      mode: result.mode,
+      operationType: "test",
     });
     const { data: test } = await supabase
       .from("ai_assistant_tests")
@@ -312,6 +330,7 @@ export async function runAssistantTest(formData: FormData) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "AI generation failed";
+    const isCreditsError = error instanceof InsufficientCreditsError;
     await supabase.from("ai_logs").insert({
       organization_id: organization.id,
       assistant_id: parsed.data.assistant_id,
@@ -324,7 +343,7 @@ export async function runAssistantTest(formData: FormData) {
       error_message: message,
     });
 
-    redirect(`/assistants/${parsed.data.assistant_id}?error=ai`);
+    redirect(`/assistants/${parsed.data.assistant_id}?error=${isCreditsError ? "no-credits" : "ai"}`);
   }
   redirect(`/assistants/${parsed.data.assistant_id}?test=${testId}`);
 }
@@ -392,6 +411,8 @@ export async function suggestConversationReply(formData: FormData) {
   let aiLogId = "";
   try {
     await enforceAIRateLimit(supabase, organization.id);
+    const estimatedMode = runtime.demoMode ? "demo" : "openai";
+    await checkCreditsOrThrow(supabase, organization.id, estimatedMode);
     const result = await orchestrator.generateReply(context);
     const { data: log } = await supabase
       .from("ai_logs")
@@ -419,9 +440,21 @@ export async function suggestConversationReply(formData: FormData) {
       .single<{ id: string }>();
 
     aiLogId = log?.id ?? "";
+    await recordAIUsage(supabase, {
+      organizationId: organization.id,
+      assistantId: assistantRow.id,
+      conversationId: parsed.data.conversation_id,
+      userId: user.id,
+      aiLogId,
+      model: result.model,
+      usage: result.usage,
+      mode: result.mode,
+      operationType: "reply",
+    });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "AI suggestion failed";
+    const isCreditsError = error instanceof InsufficientCreditsError;
     await supabase.from("ai_logs").insert({
       organization_id: organization.id,
       assistant_id: assistantRow.id,
@@ -438,7 +471,7 @@ export async function suggestConversationReply(formData: FormData) {
       },
     });
     redirect(
-      `/inbox?conversation=${parsed.data.conversation_id}&error=ai-suggestion`,
+      `/inbox?conversation=${parsed.data.conversation_id}&error=${isCreditsError ? "no-credits" : "ai-suggestion"}`,
     );
   }
   revalidatePath("/inbox");

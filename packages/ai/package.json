@@ -19,6 +19,7 @@
     "./variable-extractor": "./src/variable-extractor.ts",
     "./quote-extractor": "./src/quote-extractor.ts",
     "./assistant-templates": "./src/assistant-templates.ts",
-    "./onboarding-templates": "./src/onboarding-templates.ts"
+    "./onboarding-templates": "./src/onboarding-templates.ts",
+    "./credit-service": "./src/credit-service.ts"
   }
 }
