@@ -51,6 +51,14 @@ export type OAuthParams = {
   scopes?: string[];
 };
 
+/** Context passed to executeTool by server-side callers */
+export type ToolContext = {
+  /** Fetch a decrypted credential for this connection (server-side only) */
+  getCredential?: (type: string) => Promise<string | null>;
+  /** Whether destructive actions require human approval (default: true) */
+  requireHumanApproval?: boolean;
+};
+
 export interface HubProvider {
   readonly key: string;
   readonly name: string;
@@ -66,7 +74,8 @@ export interface HubProvider {
   executeTool(
     toolKey: string,
     input: Record<string, unknown>,
-    connection: HubConnection
+    connection: HubConnection,
+    context?: ToolContext
   ): Promise<HubToolResult>;
 
   /** Verify the connection is still valid */

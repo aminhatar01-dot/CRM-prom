@@ -14,6 +14,9 @@
     "./webchat": "./src/webchat.ts",
     "./hub-provider": "./src/hub-provider.ts",
     "./provider-registry": "./src/provider-registry.ts",
-    "./hub-executor": "./src/hub-executor.ts"
+    "./hub-executor": "./src/hub-executor.ts",
+    "./google/oauth": "./src/google/oauth.ts",
+    "./google/api": "./src/google/api.ts",
+    "./google/providers": "./src/google/providers.ts"
   }
 }

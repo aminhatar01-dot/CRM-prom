@@ -5,8 +5,15 @@ import type {
   HubToolResult,
   ConnectionHealth,
   ProviderMetadata,
+  ToolContext,
 } from "./hub-provider";
 import { HubNotImplementedError } from "./hub-provider";
+import {
+  RealGmailProvider,
+  RealGoogleCalendarProvider,
+  RealGoogleSheetsProvider,
+  RealGoogleDriveProvider,
+} from "./google/providers";
 
 // ─── Base stub class ──────────────────────────────────────────────────────────
 
@@ -19,7 +26,8 @@ abstract class BaseHubProvider implements HubProvider {
   abstract readonly iconEmoji: string;
   abstract getToolDefinitions(): HubToolDefinition[];
 
-  async executeTool(toolKey: string, _input: Record<string, unknown>, connection: HubConnection): Promise<HubToolResult> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async executeTool(toolKey: string, _input: Record<string, unknown>, connection: HubConnection, _ctx?: ToolContext): Promise<HubToolResult> {
     const defs = this.getToolDefinitions();
     if (!defs.find((d) => d.key === toolKey)) {
       return { success: false, error: `Tool "${toolKey}" not found in provider "${this.key}".`, durationMs: 0 };
@@ -42,181 +50,6 @@ abstract class BaseHubProvider implements HubProvider {
   async disconnect(_conn: HubConnection): Promise<void> {
     // token revocation is handled by the DB function disconnect_integration_connection
     // provider-specific revocation implemented per-provider in Phase 29
-  }
-}
-
-// ─── Google provider ──────────────────────────────────────────────────────────
-
-class GoogleCalendarProvider extends BaseHubProvider {
-  readonly key = "google_calendar";
-  readonly name = "Google Calendar";
-  readonly category = "productivity" as const;
-  readonly authType = "oauth2" as const;
-  readonly description = "Crear y consultar eventos del calendario.";
-  readonly iconEmoji = "📅";
-
-  getToolDefinitions(): HubToolDefinition[] {
-    return [
-      {
-        key: "create_event",
-        name: "Crear evento",
-        description: "Crea un nuevo evento en Google Calendar.",
-        inputSchema: {
-          title: { type: "string", description: "Titulo del evento", required: true },
-          start: { type: "string", description: "Fecha y hora de inicio ISO 8601", required: true },
-          end: { type: "string", description: "Fecha y hora de fin ISO 8601", required: true },
-          description: { type: "string", description: "Descripcion del evento" },
-          attendees: { type: "array", description: "Lista de emails de participantes" },
-          location: { type: "string", description: "Lugar del evento" }
-        }
-      },
-      {
-        key: "check_availability",
-        name: "Consultar disponibilidad",
-        description: "Verifica disponibilidad en un rango de tiempo.",
-        inputSchema: {
-          start: { type: "string", description: "Inicio del rango ISO 8601", required: true },
-          end: { type: "string", description: "Fin del rango ISO 8601", required: true }
-        }
-      },
-      {
-        key: "list_events",
-        name: "Listar eventos",
-        description: "Lista los proximos eventos del calendario.",
-        inputSchema: {
-          limit: { type: "number", description: "Maximo de eventos a devolver (default 10)" },
-          days_ahead: { type: "number", description: "Dias hacia adelante a consultar (default 7)" }
-        }
-      }
-    ];
-  }
-}
-
-class GmailProvider extends BaseHubProvider {
-  readonly key = "gmail";
-  readonly name = "Gmail";
-  readonly category = "productivity" as const;
-  readonly authType = "oauth2" as const;
-  readonly description = "Leer, enviar y gestionar correos de Gmail.";
-  readonly iconEmoji = "📧";
-
-  getToolDefinitions(): HubToolDefinition[] {
-    return [
-      {
-        key: "send_email",
-        name: "Enviar email",
-        description: "Envia un correo electronico desde la cuenta conectada.",
-        inputSchema: {
-          to: { type: "string", description: "Email del destinatario", required: true },
-          subject: { type: "string", description: "Asunto del correo", required: true },
-          body: { type: "string", description: "Cuerpo del mensaje (texto o HTML)", required: true },
-          cc: { type: "string", description: "Email en copia" }
-        }
-      },
-      {
-        key: "search_emails",
-        name: "Buscar emails",
-        description: "Busca correos por termino o filtro.",
-        inputSchema: {
-          query: { type: "string", description: "Termino de busqueda (Gmail query syntax)", required: true },
-          limit: { type: "number", description: "Maximo de resultados" }
-        }
-      },
-      {
-        key: "read_email",
-        name: "Leer email",
-        description: "Lee el contenido de un email especifico.",
-        inputSchema: {
-          message_id: { type: "string", description: "ID del mensaje de Gmail", required: true }
-        }
-      }
-    ];
-  }
-}
-
-class GoogleSheetsHubProvider extends BaseHubProvider {
-  readonly key = "google_sheets";
-  readonly name = "Google Sheets";
-  readonly category = "productivity" as const;
-  readonly authType = "oauth2" as const;
-  readonly description = "Leer y escribir filas en hojas de calculo.";
-  readonly iconEmoji = "📊";
-
-  getToolDefinitions(): HubToolDefinition[] {
-    return [
-      {
-        key: "read_rows",
-        name: "Leer filas",
-        description: "Lee filas de una hoja de calculo.",
-        inputSchema: {
-          spreadsheet_id: { type: "string", description: "ID o URL del spreadsheet", required: true },
-          sheet_name: { type: "string", description: "Nombre de la hoja" },
-          range: { type: "string", description: "Rango A1 (ej: A1:D10)" }
-        }
-      },
-      {
-        key: "append_row",
-        name: "Agregar fila",
-        description: "Agrega una nueva fila al final de la hoja.",
-        inputSchema: {
-          spreadsheet_id: { type: "string", description: "ID o URL del spreadsheet", required: true },
-          sheet_name: { type: "string", description: "Nombre de la hoja" },
-          values: { type: "array", description: "Valores de la fila a agregar", required: true }
-        }
-      },
-      {
-        key: "search_rows",
-        name: "Buscar filas",
-        description: "Busca filas por texto en una hoja.",
-        inputSchema: {
-          spreadsheet_id: { type: "string", description: "ID o URL del spreadsheet", required: true },
-          query: { type: "string", description: "Texto a buscar en la hoja", required: true },
-          sheet_name: { type: "string", description: "Nombre de la hoja" }
-        }
-      },
-      {
-        key: "update_row",
-        name: "Actualizar fila",
-        description: "Actualiza una fila existente en la hoja.",
-        inputSchema: {
-          spreadsheet_id: { type: "string", description: "ID o URL del spreadsheet", required: true },
-          row_index: { type: "number", description: "Indice de la fila (1-based)", required: true },
-          values: { type: "array", description: "Nuevos valores de la fila", required: true }
-        }
-      }
-    ];
-  }
-}
-
-class GoogleDriveProvider extends BaseHubProvider {
-  readonly key = "google_drive";
-  readonly name = "Google Drive";
-  readonly category = "storage" as const;
-  readonly authType = "oauth2" as const;
-  readonly description = "Listar, subir y compartir archivos en Drive.";
-  readonly iconEmoji = "💾";
-
-  getToolDefinitions(): HubToolDefinition[] {
-    return [
-      {
-        key: "list_files",
-        name: "Listar archivos",
-        description: "Lista archivos y carpetas en Drive.",
-        inputSchema: {
-          folder_id: { type: "string", description: "ID de la carpeta (opcional, por defecto raiz)" },
-          query: { type: "string", description: "Filtro de busqueda" },
-          limit: { type: "number", description: "Maximo de archivos" }
-        }
-      },
-      {
-        key: "get_file_url",
-        name: "Obtener URL de archivo",
-        description: "Obtiene la URL de descarga/visualizacion de un archivo.",
-        inputSchema: {
-          file_id: { type: "string", description: "ID del archivo en Drive", required: true }
-        }
-      }
-    ];
   }
 }
 
@@ -621,10 +454,10 @@ class GoogleAdsProvider extends BaseHubProvider {
 // ─── Registry ─────────────────────────────────────────────────────────────────
 
 const ALL_PROVIDERS: HubProvider[] = [
-  new GoogleCalendarProvider(),
-  new GmailProvider(),
-  new GoogleSheetsHubProvider(),
-  new GoogleDriveProvider(),
+  new RealGoogleCalendarProvider(),
+  new RealGmailProvider(),
+  new RealGoogleSheetsProvider(),
+  new RealGoogleDriveProvider(),
   new InstagramProvider(),
   new FacebookProvider(),
   new MessengerProvider(),

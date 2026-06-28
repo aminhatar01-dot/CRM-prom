@@ -1,4 +1,6 @@
 import type { JobRow } from "./queue";
+import { getDecryptedCredential, storeCredential } from "../integrations/credentials";
+import { refreshGoogleToken, isGoogleProvider } from "@crm-pro-ai/integrations/google/oauth";
 
 export type JobHandlerResult = {
   success: boolean;
@@ -34,8 +36,35 @@ registerJobHandler("integration_sync", async (job) => {
 });
 
 registerJobHandler("refresh_integration_token", async (job) => {
-  const { connectionId } = job.payload as Record<string, string>;
-  return { success: true, result: { handled: "stub", connectionId } };
+  const { connectionId, organizationId, providerKey } = job.payload as Record<string, string>;
+  if (!connectionId || !organizationId || !providerKey) {
+    return { success: false, error: "Missing connectionId, organizationId or providerKey in job payload" };
+  }
+
+  if (isGoogleProvider(providerKey)) {
+    const clientId     = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
+      return { success: false, error: "GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET not configured" };
+    }
+    const { createAdminClient } = await import("../supabase/admin");
+    const adminSupabase  = createAdminClient();
+    const refreshToken   = await getDecryptedCredential(adminSupabase, connectionId, organizationId, "refresh_token");
+    if (!refreshToken) {
+      return { success: false, error: `No refresh token for connection ${connectionId}` };
+    }
+    const { access_token, expires_in } = await refreshGoogleToken({ refreshToken, clientId, clientSecret });
+    const expiresAt = new Date(Date.now() + expires_in * 1000);
+    await storeCredential(adminSupabase, connectionId, organizationId, "access_token", access_token, expiresAt);
+    await adminSupabase
+      .from("integration_connections")
+      .update({ status: "connected" })
+      .eq("id", connectionId)
+      .eq("organization_id", organizationId);
+    return { success: true, result: { refreshed: true, providerKey, expiresAt: expiresAt.toISOString() } };
+  }
+
+  return { success: true, result: { handled: "stub", connectionId, providerKey } };
 });
 
 registerJobHandler("execute_integration_tool", async (job) => {

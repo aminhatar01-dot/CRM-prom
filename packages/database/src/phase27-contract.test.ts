@@ -212,15 +212,17 @@ describe("hub executor contracts", () => {
     expect(result.error).toContain("not active");
   });
 
-  it("returns notImplemented=true for Phase 27 stub providers", async () => {
+  it("returns success=false for google_calendar without credentials (Phase 29 real provider)", async () => {
     const result = await executeHubTool({
       connection: mockConnection,
       toolKey: "create_event",
       input: { title: "Test", start: "2026-07-01T10:00:00Z", end: "2026-07-01T11:00:00Z" },
       organizationId: "org-1",
+      // No context provided — requiresApproval path is hit first (before token check)
     });
     expect(result.success).toBe(false);
-    expect(result.notImplemented).toBe(true);
+    // Phase 29: real provider returns requiresApproval, not notImplemented
+    expect(result.error).toBeTruthy();
   });
 
   it("returns providerKey, toolKey and connectionId in result", async () => {

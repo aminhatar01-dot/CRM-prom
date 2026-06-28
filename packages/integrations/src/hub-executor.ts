@@ -1,11 +1,13 @@
 import { getProviderOrThrow } from "./provider-registry";
-import { HubNotImplementedError, type HubConnection, type HubToolResult } from "./hub-provider";
+import { HubNotImplementedError, type HubConnection, type HubToolResult, type ToolContext } from "./hub-provider";
 
 export type HubToolExecutionParams = {
   connection: HubConnection;
   toolKey: string;
   input: Record<string, unknown>;
   organizationId: string;
+  /** Server-side credential getter and approval settings */
+  context?: ToolContext;
 };
 
 export type HubExecutionResult = HubToolResult & {
@@ -44,7 +46,7 @@ export async function executeHubTool(params: HubToolExecutionParams): Promise<Hu
 
   const start = Date.now();
   try {
-    const result = await provider.executeTool(toolKey, input, connection);
+    const result = await provider.executeTool(toolKey, input, connection, params.context);
     return {
       ...result,
       durationMs: result.durationMs || Date.now() - start,
