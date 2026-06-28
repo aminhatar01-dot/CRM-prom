@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./tenant": "./src/tenant.ts",
-    "./crm": "./src/crm.ts"
+    "./crm": "./src/crm.ts",
+    "./quotes": "./src/quotes.ts"
   }
 }

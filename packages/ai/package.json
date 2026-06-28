@@ -16,6 +16,7 @@
     "./smart-tags": "./src/smart-tags.ts",
     "./smart-tag-classifier": "./src/smart-tag-classifier.ts",
     "./variables": "./src/variables.ts",
-    "./variable-extractor": "./src/variable-extractor.ts"
+    "./variable-extractor": "./src/variable-extractor.ts",
+    "./quote-extractor": "./src/quote-extractor.ts"
   }
 }
