@@ -1,5 +1,4 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { v4 as uuidv4 } from "uuid";
 
 export type JobStatus = "pending" | "running" | "completed" | "failed" | "dead_letter" | "cancelled";
 
@@ -141,5 +140,5 @@ export async function cancelJob(
 }
 
 export function makeJobIdempotencyKey(parts: string[]): string {
-  return [uuidv4(), ...parts].join(":");
+  return [crypto.randomUUID(), ...parts].join(":");
 }

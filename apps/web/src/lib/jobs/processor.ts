@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from "uuid";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { logEvent } from "../observability/event-log";
 import type { JobRow } from "./queue";
@@ -118,7 +117,7 @@ export async function processBatch(
   supabase: SupabaseClient,
   options: { maxJobs?: number; jobTypes?: string[] } = {},
 ): Promise<ProcessorResult[]> {
-  const workerId = `worker-${uuidv4()}`;
+  const workerId = `worker-${crypto.randomUUID()}`;
   const maxJobs = options.maxJobs ?? 10;
   const results: ProcessorResult[] = [];
 
