@@ -61,6 +61,7 @@ function assistantPayload(formData: FormData) {
     emoji_usage: value(formData, "emoji_usage"),
     commercial_pace: value(formData, "commercial_pace"),
     communication_style: value(formData, "communication_style"),
+    personality: value(formData, "personality"),
     always_ask: linesToList(value(formData, "always_ask")),
     never_invent: linesToList(value(formData, "never_invent")),
     human_topics: linesToList(value(formData, "human_topics")),

@@ -30,6 +30,7 @@ export const mainNavigationItems = [
   { href: "/integrations", label: "Integraciones", icon: Plug, adminOnly: true },
   { href: "/settings/channels/webchat", label: "WebChat", icon: MessageSquareText, adminOnly: true },
   { href: "/settings/channels/whatsapp", label: "WhatsApp", icon: Settings, adminOnly: true },
+  { href: "/settings/setup", label: "Configuracion", icon: Settings, adminOnly: true },
   { href: "/settings/system-status", label: "System Status", icon: Bot, adminOnly: true }
 ] as const;
 

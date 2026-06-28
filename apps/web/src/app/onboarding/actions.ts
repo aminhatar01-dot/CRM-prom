@@ -17,7 +17,7 @@ export async function createOrganization(formData: FormData) {
     redirect("/onboarding?error=invalid-slug");
   }
 
-  const { supabase } = await requireUser();
+  const { supabase, user } = await requireUser();
   const { error } = await supabase.rpc("create_initial_organization", {
     p_name: parsed.data.name,
     p_slug: parsed.data.slug
@@ -44,5 +44,7 @@ export async function createOrganization(formData: FormData) {
     redirect("/onboarding?error=create");
   }
 
-  redirect("/dashboard");
+  const { data: membership } = await supabase.from("organization_members").select("organization_id,organizations(name)").eq("user_id", user.id).limit(1).maybeSingle<{ organization_id: string; organizations: { name: string } | null }>();
+  if (membership) await supabase.from("organization_onboarding").upsert({ organization_id: membership.organization_id, business_name: membership.organizations?.name ?? parsed.data.name, created_by: user.id }, { onConflict: "organization_id" });
+  redirect("/onboarding?step=1");
 }

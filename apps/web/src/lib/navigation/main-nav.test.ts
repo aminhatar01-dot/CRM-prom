@@ -14,6 +14,7 @@ describe("main navigation smoke test", () => {
         "/knowledge",
         "/integrations",
         "/settings/system-status"
+        ,"/settings/setup"
       ]),
     );
   });

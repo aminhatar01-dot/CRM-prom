@@ -1,78 +1,59 @@
-import { redirect } from "next/navigation";
-import { Building2 } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, ArrowRight, Bot, Building2, CheckCircle2, Database, MessageSquareText, Sparkles, Workflow } from "lucide-react";
 import { Button } from "@crm-pro-ai/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@crm-pro-ai/ui/card";
 import { Input } from "@crm-pro-ai/ui/input";
 import { Label } from "@crm-pro-ai/ui/label";
+import { assistantTemplates } from "@crm-pro-ai/ai/assistant-templates";
+import { onboardingUseCases, recommendAssistantTemplates, recommendKnowledge } from "@crm-pro-ai/ai/onboarding-templates";
 import { requireUser } from "@/lib/auth";
+import { loadSetupStatus } from "@/lib/onboarding/status";
 import { createOrganization } from "./actions";
+import { advanceOnboarding, createInitialKnowledge, createOnboardingAssistants, finishOnboarding, saveAutomationPreferences, saveBusinessProfile, saveResponseStyle, saveUseCases, simulateOnboardingMessage } from "./setup-actions";
 
-export default async function OnboardingPage({
-  searchParams
-}: {
-  searchParams: Promise<{ error?: string; slug?: string; suggestion?: string }>;
-}) {
-  const { supabase, user } = await requireUser();
-  const params = await searchParams;
-  const { data: memberships } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .eq("user_id", user.id)
-    .limit(1);
+type SetupRow = { business_name: string; industry: string; business_description: string; country: string; currency: string; business_hours: string; crm_goal: string; use_cases: string[]; response_style: Record<string, unknown>; selected_templates: string[]; automation_preferences: Record<string, unknown>; test_completed: boolean; test_result: Record<string, unknown>; current_step: number };
+const steps = ["Negocio", "Actividad", "Asistentes", "Estilo", "Conocimiento", "WhatsApp", "Automatizaciones", "Prueba", "Checklist"];
 
-  if (memberships?.length) {
-    redirect("/dashboard");
+export default async function OnboardingPage({ searchParams }: { searchParams: Promise<{ error?: string; slug?: string; suggestion?: string; step?: string }> }) {
+  const { supabase, user } = await requireUser(); const params = await searchParams;
+  const { data: membership } = await supabase.from("organization_members").select("organization_id,organizations(name)").eq("user_id", user.id).limit(1).maybeSingle<{ organization_id: string; organizations: { name: string } | null }>();
+  if (!membership) return <OrganizationCreation params={params} />;
+  let { data: setup } = await supabase.from("organization_onboarding").select("*").eq("organization_id", membership.organization_id).maybeSingle<SetupRow>();
+  if (!setup) {
+    await supabase.from("organization_onboarding").insert({ organization_id: membership.organization_id, business_name: membership.organizations?.name ?? "Mi empresa", created_by: user.id });
+    setup = { business_name: membership.organizations?.name ?? "Mi empresa", industry: "", business_description: "", country: "", currency: "ARS", business_hours: "", crm_goal: "", use_cases: [], response_style: {}, selected_templates: [], automation_preferences: {}, test_completed: false, test_result: {}, current_step: 1 };
   }
-
-  const errorMessage = onboardingErrorMessage(params.error, params.slug, params.suggestion);
-
-  return (
-    <main className="flex min-h-screen items-center justify-center px-4 py-10">
-      <Card className="w-full max-w-lg">
-        <CardHeader>
-          <CardTitle>Crear organizacion</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form action={createOrganization} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nombre</Label>
-              <Input id="name" name="name" placeholder="Equipo Comercial" required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="slug">Slug opcional</Label>
-              <Input
-                id="slug"
-                name="slug"
-                defaultValue={params.suggestion ?? params.slug ?? ""}
-                placeholder="equipo-comercial"
-                pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
-              />
-            </div>
-            {errorMessage ? (
-              <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">
-                {errorMessage}
-              </p>
-            ) : null}
-            <Button type="submit" className="w-full">
-              <Building2 className="size-4" />
-              Crear workspace
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </main>
-  );
+  const requested = Number(params.step); const step = Number.isInteger(requested) && requested >= 1 && requested <= 9 ? requested : setup.current_step;
+  const status = await loadSetupStatus(supabase, membership.organization_id);
+  return <main className="min-h-screen bg-muted/30 px-4 py-6 lg:px-8"><div className="mx-auto max-w-6xl"><header className="mb-6 flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm font-medium text-primary">CRM PRO AI</p><h1 className="text-2xl font-semibold">Configura tu empresa paso a paso</h1><p className="text-sm text-muted-foreground">Sin prompts técnicos ni activaciones automáticas inesperadas.</p></div><Button asChild variant="outline"><Link href="/dashboard">Continuar luego</Link></Button></header>
+    <nav className="mb-6 grid grid-cols-3 gap-2 md:grid-cols-9">{steps.map((label,index) => <Link key={label} href={`/onboarding?step=${index+1}`} className={`min-h-14 rounded-md border px-2 py-2 text-center text-xs ${step === index+1 ? "border-primary bg-primary text-primary-foreground" : index+1 < setup.current_step ? "bg-emerald-50 text-emerald-800" : "bg-background text-muted-foreground"}`}><span className="block text-[10px]">{index+1}</span>{label}</Link>)}</nav>
+    {params.error ? <p role="alert" className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">Revisa los datos de este paso antes de continuar.</p> : null}
+    <Card><CardHeader><CardTitle>{steps[step-1]}</CardTitle></CardHeader><CardContent>{renderStep(step, setup, status)}</CardContent></Card>
+    <div className="mt-4 flex justify-between"><Button asChild variant="outline" disabled={step===1}><Link href={`/onboarding?step=${Math.max(1,step-1)}`}><ArrowLeft className="size-4"/>Anterior</Link></Button>{step<9 ? <Button asChild variant="outline"><Link href={`/onboarding?step=${step+1}`}>Ver siguiente<ArrowRight className="size-4"/></Link></Button> : null}</div>
+  </div></main>;
 }
 
-function onboardingErrorMessage(error?: string, slug?: string, suggestion?: string) {
-  if (!error) return null;
-  if (error === "invalid-slug") {
-    return "El slug solo puede contener letras minusculas, numeros y guiones.";
-  }
-  if (error === "slug-taken") {
-    return suggestion
-      ? `El slug "${slug}" ya existe. Prueba con "${suggestion}".`
-      : "Ese slug ya existe. Prueba con otro.";
-  }
-  return "No pudimos crear la organizacion. Intenta nuevamente.";
+function renderStep(step: number, setup: SetupRow, status: Awaited<ReturnType<typeof loadSetupStatus>>) {
+  if (step === 1) return <form action={saveBusinessProfile} className="grid gap-4 md:grid-cols-2"><Field name="business_name" label="Nombre comercial" value={setup.business_name} required/><Field name="industry" label="Rubro" value={setup.industry} placeholder="Descríbelo con tus propias palabras" required/><Area name="business_description" label="Descripción del negocio" value={setup.business_description} required/><Field name="country" label="País" value={setup.country} required/><Field name="currency" label="Moneda" value={setup.currency} required/><Area name="business_hours" label="Horarios" value={setup.business_hours}/><Area name="crm_goal" label="Objetivo principal del CRM" value={setup.crm_goal} required/><Next label="Guardar y continuar"/></form>;
+  if (step === 2) return <form action={saveUseCases} className="space-y-5"><p className="text-sm text-muted-foreground">Selecciona todo lo que tu equipo vende o atiende.</p><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{onboardingUseCases.map((item) => <Check key={item} name={`use_case_${item}`} label={useCaseLabel(item)} checked={setup.use_cases.includes(item)}/>)}</div><Next label="Recomendar asistentes"/></form>;
+  if (step === 3) { const recommended = recommendAssistantTemplates(setup.use_cases); return <form action={createOnboardingAssistants} className="space-y-5"><p className="text-sm text-muted-foreground">Creamos sugerencias según tus casos de uso. Todos los asistentes quedan editables y con auto respuesta apagada.</p><div className="grid gap-3 md:grid-cols-2">{assistantTemplates.map((template) => <label key={template.key} className="flex gap-3 rounded-md border p-4"><input type="checkbox" name={`template_${template.key}`} defaultChecked={setup.selected_templates.includes(template.key) || recommended.includes(template.key)}/><span><strong className="block">{template.name}</strong><span className="text-sm text-muted-foreground">{template.description}</span></span></label>)}</div><Next label="Crear asistentes seleccionados"/></form>; }
+  if (step === 4) return <form action={saveResponseStyle} className="grid gap-4 md:grid-cols-2"><Select name="tone" label="Tono" value={String(setup.response_style.tone ?? "professional")} options={["professional","friendly","direct","warm"]}/><Select name="formality" label="Formalidad" value={String(setup.response_style.formality ?? "professional")} options={["very_informal","close","professional","very_formal"]}/><Select name="emoji_usage" label="Emojis" value={String(setup.response_style.emoji_usage ?? "low")} options={["never","low","normal","frequent"]}/><Select name="response_length" label="Longitud" value={String(setup.response_style.response_length ?? "normal")} options={["very_short","normal","detailed"]}/><Field name="personality" label="Personalidad" value={String(setup.response_style.personality ?? "clara, humana y resolutiva")} required/><Area name="rules" label="Reglas importantes" value={String(setup.response_style.rules ?? "No inventar información del negocio.")}/><Area name="human_topics" label="Cuándo derivar a una persona" value={String(setup.response_style.human_topics ?? "Pagos, reclamos sensibles, temas legales o información incierta.")}/><Next label="Guardar estilo"/></form>;
+  if (step === 5) { const suggestions = recommendKnowledge(setup.use_cases); return <div className="space-y-6"><div><p className="text-sm font-medium">Información recomendada</p><div className="mt-2 flex flex-wrap gap-2">{suggestions.map((item)=><span key={item} className="rounded-md border px-2 py-1 text-xs">{item}</span>)}</div></div><form action={createInitialKnowledge} className="grid gap-4"><Field name="title" label="Título del primer documento" value={`${setup.business_name} - Información general`} required/><Field name="category" label="Categoría" value="general" required/><Area name="content" label="Contenido" value="" placeholder="Describe productos, servicios, horarios, políticas y preguntas frecuentes." required/><Next label="Guardar e indexar"/></form><div className="flex flex-wrap gap-2 border-t pt-4"><Button asChild variant="outline"><Link href="/knowledge/import">Importar CSV, XLSX, PDF, Word, TXT, Google Sheets o URL</Link></Button><Skip next={6} label="Configurar después"/></div></div>; }
+  if (step === 6) return <div className="space-y-5"><StatusLine ok={status.whatsapp.connected} title={status.whatsapp.connected ? "WhatsApp conectado" : "WhatsApp no conectado"} detail={status.whatsapp.phone ?? "Sin número vinculado"}/><StatusLine ok={status.whatsapp.tokenStatus === "active"} title="Credencial" detail={status.whatsapp.tokenStatus}/><StatusLine ok={status.whatsapp.webhookActive} title="Webhook" detail={status.whatsapp.webhookActive ? "Configurado" : "Pendiente"}/><div className="flex gap-2"><Button asChild><Link href="/settings/channels/whatsapp">Abrir configuración de WhatsApp</Link></Button><Skip next={7} label={status.whatsapp.connected ? "Continuar" : "Configurar después"}/></div></div>;
+  if (step === 7) return <form action={saveAutomationPreferences} className="space-y-5"><p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Todo está apagado por defecto. IA automática aún requiere asistente habilitado y conversación en modo automático.</p><div className="grid gap-3 md:grid-cols-2"><Check name="draft_mode" label="Generar borradores IA"/><Check name="controlled_auto" label="IA automática controlada"/><Check name="task_new_lead" label="Crear tarea en nuevo lead"/><Check name="smart_tags" label="Aplicar Smart Tags"/><Check name="variables" label="Extraer Variables"/><Check name="quotes" label="Generar cotizaciones"/><Check name="human_handoff" label="Derivar a humano"/></div><Next label="Guardar selección"/></form>;
+  if (step === 8) return <form action={simulateOnboardingMessage} className="space-y-5"><p className="text-sm text-muted-foreground">La simulación no envía WhatsApp ni ejecuta acciones. Muestra routing, fuentes y política de envío.</p><Select name="channel" label="Canal simulado" value="whatsapp" options={["whatsapp","webchat","manual"]}/><Area name="message" label="Mensaje del cliente" value="" placeholder="Ejemplo: ¿Cuánto cuesta el producto X?" required/><Next label="Ejecutar simulación segura"/></form>;
+  const test = setup.test_result; return <div className="space-y-6"><SetupSummary status={status}/>{setup.test_completed ? <div className="rounded-md border p-4 text-sm"><p className="font-medium">Última prueba</p><p className="mt-2">Asistente: {String(test.assistant_name ?? "Sin coincidencia")}</p><p>Resultado: {String(test.outcome ?? "Borrador")}</p><p>Motivo: {routingReason(test.routing)}</p></div> : null}<form action={finishOnboarding}><Button type="submit"><CheckCircle2 className="size-4"/>Finalizar onboarding</Button></form></div>;
 }
+
+function OrganizationCreation({ params }: { params: { error?: string; slug?: string; suggestion?: string } }) { const error = onboardingErrorMessage(params.error,params.slug,params.suggestion); return <main className="flex min-h-screen items-center justify-center px-4 py-10"><Card className="w-full max-w-lg"><CardHeader><CardTitle>Crear organización</CardTitle></CardHeader><CardContent><form action={createOrganization} className="space-y-4"><Field name="name" label="Nombre" value="" placeholder="Equipo Comercial" required/><Field name="slug" label="Slug opcional" value={params.suggestion ?? params.slug ?? ""} placeholder="equipo-comercial"/>{error ? <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p>:null}<Button type="submit" className="w-full"><Building2 className="size-4"/>Crear workspace</Button></form></CardContent></Card></main>; }
+function Field({name,label,value,placeholder,required=false}:{name:string;label:string;value:string;placeholder?:string;required?:boolean}) { return <div className="space-y-2"><Label htmlFor={name}>{label}</Label><Input id={name} name={name} defaultValue={value} placeholder={placeholder} required={required}/></div>; }
+function Area({name,label,value,placeholder,required=false}:{name:string;label:string;value:string;placeholder?:string;required?:boolean}) { return <div className="space-y-2 md:col-span-2"><Label htmlFor={name}>{label}</Label><textarea id={name} name={name} defaultValue={value} placeholder={placeholder} required={required} rows={4} className="w-full rounded-md border bg-background px-3 py-2 text-sm"/></div>; }
+function Select({name,label,value,options}:{name:string;label:string;value:string;options:string[]}) { return <div className="space-y-2"><Label htmlFor={name}>{label}</Label><select id={name} name={name} defaultValue={value} className="h-10 w-full rounded-md border bg-background px-3 text-sm">{options.map((item)=><option key={item}>{item}</option>)}</select></div>; }
+function Check({name,label,checked=false}:{name:string;label:string;checked?:boolean}) { return <label className="flex items-center gap-3 rounded-md border p-4 text-sm"><input type="checkbox" name={name} defaultChecked={checked}/>{label}</label>; }
+function Next({label}:{label:string}) { return <div className="md:col-span-2"><Button type="submit">{label}<ArrowRight className="size-4"/></Button></div>; }
+function Skip({next,label}:{next:number;label:string}) { return <form action={advanceOnboarding}><input type="hidden" name="next_step" value={next}/><Button type="submit" variant="outline">{label}</Button></form>; }
+function StatusLine({ok,title,detail}:{ok:boolean;title:string;detail:string}) { return <div className="flex items-center gap-3 rounded-md border p-4"><CheckCircle2 className={`size-5 ${ok?"text-emerald-600":"text-amber-600"}`}/><div><p className="font-medium">{title}</p><p className="text-sm text-muted-foreground">{detail}</p></div></div>; }
+function SetupSummary({status}:{status:Awaited<ReturnType<typeof loadSetupStatus>>}) { const rows=[[Building2,"Negocio",status.businessConfigured],[Bot,"Asistentes",status.assistantsCount>0],[Database,"Conocimiento",status.knowledgeCount>0],[MessageSquareText,"WhatsApp",status.whatsapp.connected],[Workflow,"Automatizaciones",status.activeAutomations>0],[Sparkles,"Prueba",status.testCompleted]] as const; return <div><div className="mb-4 flex items-center justify-between"><h2 className="font-semibold">Configuración completada</h2><strong className="text-2xl">{status.percentage}%</strong></div><div className="grid gap-3 md:grid-cols-3">{rows.map(([Icon,label,ok])=><div key={label} className="flex items-center gap-2 rounded-md border p-3 text-sm"><Icon className={`size-4 ${ok?"text-emerald-600":"text-amber-600"}`}/>{label}: {ok?"OK":"Pendiente"}</div>)}</div>{status.tasks.length?<div className="mt-4 rounded-md border p-4 text-sm"><p className="font-medium">Pendientes</p><ul className="mt-2 space-y-1 text-muted-foreground">{status.tasks.map((item)=><li key={item}>- {item}</li>)}</ul></div>:null}</div>; }
+function routingReason(value: unknown) { return value && typeof value === "object" && "reason" in value ? String((value as {reason:unknown}).reason) : "Sin coincidencia concluyente"; }
+function useCaseLabel(value:string){return ({products:"Productos",services:"Servicios",support:"Soporte",scheduling:"Reservas o turnos",quotes:"Cotizaciones",after_sales:"Postventa",collections:"Cobranzas",other:"Otro"} as Record<string,string>)[value]??value;}
+function onboardingErrorMessage(error?:string,slug?:string,suggestion?:string){if(!error)return null;if(error==="invalid-slug")return "El slug solo puede contener letras minúsculas, números y guiones.";if(error==="slug-taken")return suggestion?`El slug "${slug}" ya existe. Prueba con "${suggestion}".`:"Ese slug ya existe.";return "No pudimos completar la operación. Intenta nuevamente.";}

@@ -54,6 +54,7 @@ const defaultConfig: AgentConfig = {
   emoji_usage: "low",
   commercial_pace: "consultative",
   communication_style: "friendly",
+  personality: "",
   always_ask: [],
   never_invent: ["precios", "disponibilidad", "condiciones comerciales"],
   human_topics: ["reclamos", "pagos", "temas legales"],
@@ -329,6 +330,7 @@ export function AssistantForm({
             ["very_formal", "Muy formal"],
           ]}
         />
+        <Field label="Personalidad adicional" name="personality" defaultValue={config.personality} placeholder="Ejemplo: paciente, resolutiva y cercana" />
         <ChoiceGroup
           label="Longitud"
           name="response_length"
