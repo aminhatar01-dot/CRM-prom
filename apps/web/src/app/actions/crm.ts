@@ -11,7 +11,7 @@ import {
   leadPipelineStatusSchema,
   leadUpdateSchema,
   messageInputSchema,
-  messageUpdateSchema
+  messageUpdateSchema,
 } from "@crm-pro-ai/database/crm";
 import { WhatsAppCloudService } from "@crm-pro-ai/integrations/whatsapp-cloud-service";
 import { requireUser } from "@/lib/auth";
@@ -37,7 +37,7 @@ function leadPayload(formData: FormData) {
     source: value(formData, "source"),
     status: value(formData, "status"),
     owner_id: value(formData, "owner_id"),
-    notes: value(formData, "notes")
+    notes: value(formData, "notes"),
   };
 }
 
@@ -50,29 +50,58 @@ function contactPayload(formData: FormData) {
     company: value(formData, "company"),
     location: value(formData, "location"),
     owner_id: value(formData, "owner_id"),
-    notes: value(formData, "notes")
+    notes: value(formData, "notes"),
   };
 }
 
 const whatsappSettingsSchema = z.object({
   phone_number_id: z.string().trim().min(3).max(80),
-  business_account_id: z.string().trim().max(80).optional().transform((value) => value || null),
-  display_phone_number: z.string().trim().max(40).optional().transform((value) => value || null),
-  webhook_verify_token_hint: z.string().trim().max(120).optional().transform((value) => value || null),
-  enabled: z.boolean().default(false)
+  business_account_id: z
+    .string()
+    .trim()
+    .max(80)
+    .optional()
+    .transform((value) => value || null),
+  display_phone_number: z
+    .string()
+    .trim()
+    .max(40)
+    .optional()
+    .transform((value) => value || null),
+  webhook_verify_token_hint: z
+    .string()
+    .trim()
+    .max(120)
+    .optional()
+    .transform((value) => value || null),
+  enabled: z.boolean().default(false),
 });
 
 const archiveSchema = z.object({
   id: z.string().uuid(),
-  return_to: z.string().startsWith("/").max(300)
+  return_to: z.string().startsWith("/").max(300),
 });
 
 const conversationAIControlSchema = z.object({
   id: z.string().uuid(),
   ai_status: z.enum(["active", "paused", "human"]),
   ai_paused: z.boolean().default(false),
-  return_to: z.string().startsWith("/").max(300)
+  return_to: z.string().startsWith("/").max(300),
 });
+const conversationAssistantRoutingSchema = z
+  .object({
+    id: z.string().uuid(),
+    mode: z.enum(["auto", "manual"]),
+    assistant_id: z
+      .string()
+      .uuid()
+      .or(z.literal(""))
+      .transform((item) => item || null),
+    return_to: z.string().startsWith("/").max(300),
+  })
+  .refine((item) => item.mode === "auto" || Boolean(item.assistant_id), {
+    message: "Manual routing requires an assistant.",
+  });
 
 export async function createLead(formData: FormData) {
   const parsed = leadInputSchema.safeParse(leadPayload(formData));
@@ -80,13 +109,15 @@ export async function createLead(formData: FormData) {
 
   const { supabase, user } = await requireUser();
   const organization = await getActiveOrganization(supabase, user);
-  const fullName = [parsed.data.first_name, parsed.data.last_name].filter(Boolean).join(" ");
+  const fullName = [parsed.data.first_name, parsed.data.last_name]
+    .filter(Boolean)
+    .join(" ");
   const { data, error } = await supabase
     .from("leads")
     .insert({
       ...parsed.data,
       title: fullName,
-      organization_id: organization.id
+      organization_id: organization.id,
     })
     .select("id")
     .single();
@@ -100,7 +131,7 @@ export async function createLead(formData: FormData) {
     eventId: data.id,
     leadId: data.id,
     ownerId: parsed.data.owner_id || null,
-    actorUserId: user.id
+    actorUserId: user.id,
   });
   revalidatePath("/leads");
   redirect(`/leads/${data.id}`);
@@ -109,9 +140,10 @@ export async function createLead(formData: FormData) {
 export async function updateLead(formData: FormData) {
   const parsed = leadUpdateSchema.safeParse({
     id: value(formData, "id"),
-    ...leadPayload(formData)
+    ...leadPayload(formData),
   });
-  if (!parsed.success) redirect(`/leads/${value(formData, "id")}/edit?error=invalid`);
+  if (!parsed.success)
+    redirect(`/leads/${value(formData, "id")}/edit?error=invalid`);
 
   const { supabase, user } = await requireUser();
   const organization = await getActiveOrganization(supabase, user);
@@ -121,13 +153,15 @@ export async function updateLead(formData: FormData) {
     .eq("id", parsed.data.id)
     .eq("organization_id", organization.id)
     .maybeSingle<{ status: string }>();
-  const fullName = [parsed.data.first_name, parsed.data.last_name].filter(Boolean).join(" ");
+  const fullName = [parsed.data.first_name, parsed.data.last_name]
+    .filter(Boolean)
+    .join(" ");
   const { id, ...payload } = parsed.data;
   const { data: updated, error } = await supabase
     .from("leads")
     .update({
       ...payload,
-      title: fullName
+      title: fullName,
     })
     .eq("id", id)
     .eq("organization_id", organization.id)
@@ -147,7 +181,10 @@ export async function updateLead(formData: FormData) {
       leadId: id,
       ownerId: payload.owner_id || null,
       actorUserId: user.id,
-      metadata: { previous_status: previous.status, lead_status: payload.status }
+      metadata: {
+        previous_status: previous.status,
+        lead_status: payload.status,
+      },
     });
   }
   revalidatePath("/leads");
@@ -186,14 +223,21 @@ export async function updateLeadPipelineStatus(input: {
       error:
         code === "forbidden"
           ? "No tienes permisos para mover este lead."
-          : "No pudimos actualizar el estado. Intenta nuevamente."
+          : "No pudimos actualizar el estado. Intenta nuevamente.",
     };
   }
-  if (!data) return { ok: false, error: "El lead ya no existe o fue archivado." };
+  if (!data)
+    return { ok: false, error: "El lead ya no existe o fue archivado." };
 
-  await audit("update_lead_pipeline_status", "leads", data.id, organization.id, {
-    status: parsed.data.status
-  });
+  await audit(
+    "update_lead_pipeline_status",
+    "leads",
+    data.id,
+    organization.id,
+    {
+      status: parsed.data.status,
+    },
+  );
   if (previous?.status && previous.status !== parsed.data.status) {
     await dispatchAutomationEvent(supabase, {
       organizationId: organization.id,
@@ -202,7 +246,10 @@ export async function updateLeadPipelineStatus(input: {
       leadId: data.id,
       ownerId: previous.owner_id,
       actorUserId: user.id,
-      metadata: { previous_status: previous.status, lead_status: parsed.data.status }
+      metadata: {
+        previous_status: previous.status,
+        lead_status: parsed.data.status,
+      },
     });
   }
   revalidatePath("/pipeline");
@@ -239,22 +286,24 @@ export async function convertLeadToContact(formData: FormData) {
       company: lead.company,
       owner_id: lead.owner_id,
       notes: lead.notes,
-      converted_from_lead_id: lead.id
+      converted_from_lead_id: lead.id,
     })
     .select("id")
     .single();
 
-  if (error || !contact) redirect(`/leads/${leadId}?error=${actionErrorCode(error)}`);
+  if (error || !contact)
+    redirect(`/leads/${leadId}?error=${actionErrorCode(error)}`);
 
   const { error: leadUpdateError } = await supabase
     .from("leads")
     .update({ contact_id: contact.id, status: "ganado" })
     .eq("id", lead.id)
     .eq("organization_id", organization.id);
-  if (leadUpdateError) redirect(`/leads/${leadId}?error=${actionErrorCode(leadUpdateError)}`);
+  if (leadUpdateError)
+    redirect(`/leads/${leadId}?error=${actionErrorCode(leadUpdateError)}`);
 
   await audit("convert_lead_to_contact", "leads", lead.id, organization.id, {
-    contact_id: contact.id
+    contact_id: contact.id,
   });
   revalidatePath("/contacts");
   redirect(`/contacts/${contact.id}`);
@@ -266,13 +315,15 @@ export async function createContact(formData: FormData) {
 
   const { supabase, user } = await requireUser();
   const organization = await getActiveOrganization(supabase, user);
-  const fullName = [parsed.data.first_name, parsed.data.last_name].filter(Boolean).join(" ");
+  const fullName = [parsed.data.first_name, parsed.data.last_name]
+    .filter(Boolean)
+    .join(" ");
   const { data, error } = await supabase
     .from("contacts")
     .insert({
       ...parsed.data,
       full_name: fullName,
-      organization_id: organization.id
+      organization_id: organization.id,
     })
     .select("id")
     .single();
@@ -287,19 +338,22 @@ export async function createContact(formData: FormData) {
 export async function updateContact(formData: FormData) {
   const parsed = contactUpdateSchema.safeParse({
     id: value(formData, "id"),
-    ...contactPayload(formData)
+    ...contactPayload(formData),
   });
-  if (!parsed.success) redirect(`/contacts/${value(formData, "id")}/edit?error=invalid`);
+  if (!parsed.success)
+    redirect(`/contacts/${value(formData, "id")}/edit?error=invalid`);
 
   const { supabase, user } = await requireUser();
   const organization = await getActiveOrganization(supabase, user);
   const { id, ...payload } = parsed.data;
-  const fullName = [payload.first_name, payload.last_name].filter(Boolean).join(" ");
+  const fullName = [payload.first_name, payload.last_name]
+    .filter(Boolean)
+    .join(" ");
   const { data: updated, error } = await supabase
     .from("contacts")
     .update({
       ...payload,
-      full_name: fullName
+      full_name: fullName,
     })
     .eq("id", id)
     .eq("organization_id", organization.id)
@@ -323,7 +377,7 @@ export async function createConversation(formData: FormData) {
     channel: value(formData, "channel"),
     status: value(formData, "status"),
     ai_status: value(formData, "ai_status"),
-    owner_id: value(formData, "owner_id")
+    owner_id: value(formData, "owner_id"),
   });
   const fallback = value(formData, "return_to") || "/inbox";
   if (!parsed.success) redirect(`${fallback}?error=invalid-conversation`);
@@ -334,12 +388,13 @@ export async function createConversation(formData: FormData) {
     .from("conversations")
     .insert({
       ...parsed.data,
-      organization_id: organization.id
+      organization_id: organization.id,
     })
     .select("id")
     .single();
 
-  if (error || !data) redirect(addQueryParam(fallback, "error", actionErrorCode(error)));
+  if (error || !data)
+    redirect(addQueryParam(fallback, "error", actionErrorCode(error)));
 
   await audit("create_conversation", "conversations", data.id, organization.id);
   revalidatePath("/inbox");
@@ -351,7 +406,7 @@ export async function updateConversation(formData: FormData) {
     id: value(formData, "id"),
     status: value(formData, "status"),
     ai_status: value(formData, "ai_status"),
-    owner_id: value(formData, "owner_id")
+    owner_id: value(formData, "owner_id"),
   });
   if (!parsed.success) redirect("/inbox?error=invalid-conversation");
 
@@ -367,7 +422,8 @@ export async function updateConversation(formData: FormData) {
     .select("id")
     .maybeSingle<{ id: string }>();
 
-  if (error) redirect(`/inbox?conversation=${id}&error=${actionErrorCode(error)}`);
+  if (error)
+    redirect(`/inbox?conversation=${id}&error=${actionErrorCode(error)}`);
   if (!updated) redirect("/inbox?error=not-found");
 
   await audit("update_conversation", "conversations", id, organization.id);
@@ -380,7 +436,7 @@ export async function updateConversationAIControl(formData: FormData) {
     id: value(formData, "id"),
     ai_status: value(formData, "ai_status"),
     ai_paused: formData.get("ai_paused") === "true",
-    return_to: value(formData, "return_to") || "/inbox"
+    return_to: value(formData, "return_to") || "/inbox",
   });
   if (!parsed.success) redirect("/inbox?error=invalid-ai-mode");
 
@@ -390,7 +446,7 @@ export async function updateConversationAIControl(formData: FormData) {
     .from("conversations")
     .update({
       ai_status: parsed.data.ai_status,
-      ai_paused: parsed.data.ai_paused
+      ai_paused: parsed.data.ai_paused,
     })
     .eq("id", parsed.data.id)
     .eq("organization_id", organization.id)
@@ -398,15 +454,95 @@ export async function updateConversationAIControl(formData: FormData) {
     .select("id")
     .maybeSingle<{ id: string }>();
 
-  if (error) redirect(addQueryParam(parsed.data.return_to, "error", actionErrorCode(error)));
-  if (!data) redirect(addQueryParam(parsed.data.return_to, "error", "not-found"));
+  if (error)
+    redirect(
+      addQueryParam(parsed.data.return_to, "error", actionErrorCode(error)),
+    );
+  if (!data)
+    redirect(addQueryParam(parsed.data.return_to, "error", "not-found"));
 
-  await audit("update_conversation_ai_control", "conversations", parsed.data.id, organization.id, {
-    ai_status: parsed.data.ai_status,
-    ai_paused: parsed.data.ai_paused
-  });
+  await audit(
+    "update_conversation_ai_control",
+    "conversations",
+    parsed.data.id,
+    organization.id,
+    {
+      ai_status: parsed.data.ai_status,
+      ai_paused: parsed.data.ai_paused,
+    },
+  );
   revalidatePath("/inbox");
   redirect(addQueryParam(parsed.data.return_to, "ai", parsed.data.ai_status));
+}
+
+export async function updateConversationAssistantRouting(formData: FormData) {
+  const parsed = conversationAssistantRoutingSchema.safeParse({
+    id: value(formData, "id"),
+    mode: value(formData, "mode"),
+    assistant_id: value(formData, "assistant_id"),
+    return_to: value(formData, "return_to") || "/inbox",
+  });
+  if (!parsed.success) redirect("/inbox?error=invalid-assistant-routing");
+  const { supabase, user } = await requireUser();
+  const organization = await getActiveOrganization(supabase, user);
+  if (parsed.data.assistant_id) {
+    const { data: assistant } = await supabase
+      .from("ai_assistants")
+      .select("id")
+      .eq("id", parsed.data.assistant_id)
+      .eq("organization_id", organization.id)
+      .eq("active", true)
+      .is("archived_at", null)
+      .maybeSingle();
+    if (!assistant)
+      redirect(
+        addQueryParam(parsed.data.return_to, "error", "invalid-reference"),
+      );
+  }
+  const payload =
+    parsed.data.mode === "manual"
+      ? {
+          assistant_routing_mode: "manual",
+          forced_assistant_id: parsed.data.assistant_id,
+          current_assistant_id: parsed.data.assistant_id,
+          assistant_routing_metadata: {
+            reason: "Asignado manualmente",
+            actor_user_id: user.id,
+            changed_at: new Date().toISOString(),
+          },
+        }
+      : {
+          assistant_routing_mode: "auto",
+          forced_assistant_id: null,
+          assistant_routing_metadata: {
+            reason: "Router automatico habilitado",
+            actor_user_id: user.id,
+            changed_at: new Date().toISOString(),
+          },
+        };
+  const { data, error } = await supabase
+    .from("conversations")
+    .update(payload)
+    .eq("id", parsed.data.id)
+    .eq("organization_id", organization.id)
+    .is("archived_at", null)
+    .select("id")
+    .maybeSingle();
+  if (error)
+    redirect(
+      addQueryParam(parsed.data.return_to, "error", actionErrorCode(error)),
+    );
+  if (!data)
+    redirect(addQueryParam(parsed.data.return_to, "error", "not-found"));
+  await audit(
+    "update_conversation_assistant_routing",
+    "conversations",
+    parsed.data.id,
+    organization.id,
+    { mode: parsed.data.mode, assistant_id: parsed.data.assistant_id },
+  );
+  revalidatePath("/inbox");
+  redirect(addQueryParam(parsed.data.return_to, "routing", parsed.data.mode));
 }
 
 export async function createMessage(formData: FormData) {
@@ -415,7 +551,7 @@ export async function createMessage(formData: FormData) {
     body: value(formData, "body"),
     direction: value(formData, "direction"),
     channel: value(formData, "channel"),
-    status: value(formData, "status")
+    status: value(formData, "status"),
   });
   if (!parsed.success) redirect("/inbox?error=invalid-message");
 
@@ -437,7 +573,8 @@ export async function createMessage(formData: FormData) {
 
   if (!conversation) redirect("/inbox?error=missing-conversation");
 
-  const initialStatus = conversation.channel === "whatsapp" ? "pending" : parsed.data.status;
+  const initialStatus =
+    conversation.channel === "whatsapp" ? "pending" : parsed.data.status;
   const { data: createdMessage, error } = await supabase
     .from("messages")
     .insert({
@@ -446,29 +583,40 @@ export async function createMessage(formData: FormData) {
       organization_id: organization.id,
       sender_type: parsed.data.direction === "outbound" ? "user" : "contact",
       sender_user_id: parsed.data.direction === "outbound" ? user.id : null,
-      metadata: {}
+      metadata: {},
     })
     .select("id")
     .single<{ id: string }>();
 
   if (error || !createdMessage) {
-    redirect(`/inbox?conversation=${conversation.id}&error=${actionErrorCode(error)}`);
+    redirect(
+      `/inbox?conversation=${conversation.id}&error=${actionErrorCode(error)}`,
+    );
   }
 
-  if (conversation.channel === "whatsapp" && parsed.data.direction === "outbound") {
+  if (
+    conversation.channel === "whatsapp" &&
+    parsed.data.direction === "outbound"
+  ) {
     await sendWhatsAppMessage({
       body: parsed.data.body,
       conversation,
       messageId: createdMessage.id,
-      organizationId: organization.id
+      organizationId: organization.id,
     });
   }
 
-  await audit("create_message", "messages", createdMessage.id, organization.id, {
-    conversation_id: conversation.id,
-    direction: parsed.data.direction,
-    channel: conversation.channel
-  });
+  await audit(
+    "create_message",
+    "messages",
+    createdMessage.id,
+    organization.id,
+    {
+      conversation_id: conversation.id,
+      direction: parsed.data.direction,
+      channel: conversation.channel,
+    },
+  );
   revalidatePath("/inbox");
   redirect(`/inbox?conversation=${conversation.id}`);
 }
@@ -477,7 +625,7 @@ export async function updateMessage(formData: FormData) {
   const parsed = messageUpdateSchema.safeParse({
     id: value(formData, "id"),
     conversation_id: value(formData, "conversation_id"),
-    body: value(formData, "body")
+    body: value(formData, "body"),
   });
   if (!parsed.success) redirect("/inbox?error=invalid");
 
@@ -494,15 +642,22 @@ export async function updateMessage(formData: FormData) {
     .maybeSingle<{ id: string }>();
 
   if (error) {
-    redirect(`/inbox?conversation=${parsed.data.conversation_id}&error=${actionErrorCode(error)}`);
+    redirect(
+      `/inbox?conversation=${parsed.data.conversation_id}&error=${actionErrorCode(error)}`,
+    );
   }
-  if (!data) redirect(`/inbox?conversation=${parsed.data.conversation_id}&error=not-found`);
+  if (!data)
+    redirect(
+      `/inbox?conversation=${parsed.data.conversation_id}&error=not-found`,
+    );
 
   await audit("update_message", "messages", parsed.data.id, organization.id, {
-    conversation_id: parsed.data.conversation_id
+    conversation_id: parsed.data.conversation_id,
   });
   revalidatePath("/inbox");
-  redirect(`/inbox?conversation=${parsed.data.conversation_id}&success=updated`);
+  redirect(
+    `/inbox?conversation=${parsed.data.conversation_id}&success=updated`,
+  );
 }
 
 export async function saveWhatsAppSettings(formData: FormData) {
@@ -511,7 +666,7 @@ export async function saveWhatsAppSettings(formData: FormData) {
     business_account_id: value(formData, "business_account_id"),
     display_phone_number: value(formData, "display_phone_number"),
     webhook_verify_token_hint: value(formData, "webhook_verify_token_hint"),
-    enabled: formData.get("enabled") === "on"
+    enabled: formData.get("enabled") === "on",
   });
 
   if (!parsed.success) redirect("/settings/channels/whatsapp?error=invalid");
@@ -521,10 +676,10 @@ export async function saveWhatsAppSettings(formData: FormData) {
   const { error } = await supabase.from("whatsapp_channel_settings").upsert(
     {
       ...parsed.data,
-      organization_id: organization.id
+      organization_id: organization.id,
     },
     {
-      onConflict: "organization_id,phone_number_id"
+      onConflict: "organization_id,phone_number_id",
     },
   );
 
@@ -557,9 +712,10 @@ async function archiveRecord(
 ) {
   const parsed = archiveSchema.safeParse({
     id: value(formData, "id"),
-    return_to: value(formData, "return_to") || defaultReturnTo
+    return_to: value(formData, "return_to") || defaultReturnTo,
   });
-  if (!parsed.success) redirect(addQueryParam(defaultReturnTo, "error", "invalid"));
+  if (!parsed.success)
+    redirect(addQueryParam(defaultReturnTo, "error", "invalid"));
 
   const { supabase, user } = await requireUser();
   const organization = await getActiveOrganization(supabase, user);
@@ -572,8 +728,12 @@ async function archiveRecord(
     .select("id")
     .maybeSingle<{ id: string }>();
 
-  if (error) redirect(addQueryParam(parsed.data.return_to, "error", actionErrorCode(error)));
-  if (!data) redirect(addQueryParam(parsed.data.return_to, "error", "not-found"));
+  if (error)
+    redirect(
+      addQueryParam(parsed.data.return_to, "error", actionErrorCode(error)),
+    );
+  if (!data)
+    redirect(addQueryParam(parsed.data.return_to, "error", "not-found"));
 
   await audit(`archive_${table}`, table, parsed.data.id, organization.id);
   revalidatePath(defaultReturnTo);
@@ -584,7 +744,7 @@ async function sendWhatsAppMessage({
   body,
   conversation,
   messageId,
-  organizationId
+  organizationId,
 }: {
   body: string;
   conversation: {
@@ -604,12 +764,17 @@ async function sendWhatsAppMessage({
     .eq("organization_id", organizationId)
     .eq("enabled", true)
     .limit(1)
-    .maybeSingle<{ id: string; phone_number_id: string; enabled: boolean; connection_method: string }>();
+    .maybeSingle<{
+      id: string;
+      phone_number_id: string;
+      enabled: boolean;
+      connection_method: string;
+    }>();
   const accessToken = setting
     ? await getWhatsAppAccessToken({
         organizationId,
         channelSettingId: setting.id,
-        connectionMethod: setting.connection_method
+        connectionMethod: setting.connection_method,
       })
     : null;
 
@@ -618,7 +783,9 @@ async function sendWhatsAppMessage({
       .from("messages")
       .update({
         status: "failed",
-        metadata: { error: "WhatsApp is not configured or recipient phone is missing." }
+        metadata: {
+          error: "WhatsApp is not configured or recipient phone is missing.",
+        },
       })
       .eq("id", messageId)
       .eq("organization_id", organizationId);
@@ -629,7 +796,7 @@ async function sendWhatsAppMessage({
     accessToken,
     phoneNumberId: setting.phone_number_id,
     graphApiVersion: env.WHATSAPP_GRAPH_API_VERSION,
-    appSecret: env.WHATSAPP_APP_SECRET
+    appSecret: env.WHATSAPP_APP_SECRET,
   });
 
   try {
@@ -641,7 +808,7 @@ async function sendWhatsAppMessage({
       .update({
         status: "sent",
         external_message_id: externalMessageId,
-        metadata: { whatsapp_response: response }
+        metadata: { whatsapp_response: response },
       })
       .eq("id", messageId)
       .eq("organization_id", organizationId);
@@ -655,15 +822,16 @@ async function sendWhatsAppMessage({
       message_id: messageId,
       phone_number_id: setting.phone_number_id,
       contact_wa_id: recipient,
-      payload: response
+      payload: response,
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown WhatsApp error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown WhatsApp error";
     await supabase
       .from("messages")
       .update({
         status: "failed",
-        metadata: { error: errorMessage }
+        metadata: { error: errorMessage },
       })
       .eq("id", messageId)
       .eq("organization_id", organizationId);
@@ -677,7 +845,7 @@ async function sendWhatsAppMessage({
       phone_number_id: setting.phone_number_id,
       contact_wa_id: recipient,
       payload: {},
-      error_message: errorMessage
+      error_message: errorMessage,
     });
   }
 }
@@ -696,6 +864,6 @@ async function audit(
     action,
     entity_table: entityTable,
     entity_id: entityId,
-    metadata
+    metadata,
   });
 }

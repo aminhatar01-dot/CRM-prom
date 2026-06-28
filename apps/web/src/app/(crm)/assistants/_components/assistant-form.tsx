@@ -7,6 +7,10 @@ import { Button } from "@crm-pro-ai/ui/button";
 import { Input } from "@crm-pro-ai/ui/input";
 import { Label } from "@crm-pro-ai/ui/label";
 import { createAssistant, updateAssistant } from "@/app/actions/ai";
+import {
+  assistantTemplates,
+  getAssistantTemplate,
+} from "@crm-pro-ai/ai/assistant-templates";
 import { SubmitButton } from "../../_components/submit-button";
 
 type Assistant = {
@@ -21,7 +25,14 @@ type Assistant = {
   playbooks: AgentPlaybook[] | null;
 };
 
-const steps = ["Empresa", "Oferta", "Personalidad", "Conocimiento", "Comportamiento", "Probar"];
+const steps = [
+  "Empresa",
+  "Oferta",
+  "Personalidad",
+  "Conocimiento",
+  "Comportamiento",
+  "Probar",
+];
 
 const defaultConfig: AgentConfig = {
   agent_name: "Asistente comercial",
@@ -52,32 +63,131 @@ const defaultConfig: AgentConfig = {
   pause_ai_when: [],
   auto_reply_when: ["la consulta tenga informacion suficiente"],
   draft_only_when: ["falte informacion sensible o se requiera una persona"],
-  knowledge_topics: ["productos", "servicios", "preguntas frecuentes", "precios", "horarios", "politicas"]
+  knowledge_topics: [
+    "productos",
+    "servicios",
+    "preguntas frecuentes",
+    "precios",
+    "horarios",
+    "politicas",
+  ],
+  can_answer_prices: false,
+  can_create_quotes: false,
+  can_send_quotes: false,
+  quote_requires_human_approval: true,
+  can_auto_send_simple_prices: false,
+  can_auto_send_full_quotes: false,
+  quote_auto_send_max_amount: null,
+  missing_price_behavior: "human",
+  missing_stock_behavior: "confirm",
+  quote_knowledge_categories: [],
+  default_currency: "ARS",
+  default_commercial_terms: "",
 };
 
 const playbookDefinitions = [
-  ["first_contact", "Primer contacto", "Saludar, entender el motivo de consulta y pedir solo el dato inicial necesario."],
-  ["follow_up", "Seguimiento", "Retomar el contexto sin repetir todo y proponer un siguiente paso concreto."],
-  ["sales", "Ventas", "Detectar necesidad, presentar una opcion real y avanzar hacia una decision sin presionar."],
-  ["support", "Soporte", "Confirmar el problema, pedir datos esenciales y resolver o derivar con contexto."],
-  ["collections", "Cobranza", "Tratar pagos con respeto y derivar a humano antes de confirmar importes o acuerdos."],
-  ["scheduling", "Agenda", "Solicitar fecha, horario y datos necesarios antes de confirmar una cita."],
-  ["reservations", "Reservas", "Validar disponibilidad real y recopilar los datos requeridos para reservar."],
-  ["quote", "Presupuesto", "Reunir requisitos y generar un borrador si faltan precios o validacion humana."],
-  ["after_sales", "Postventa", "Consultar satisfaccion, resolver pendientes y registrar el seguimiento necesario."]
+  [
+    "first_contact",
+    "Primer contacto",
+    "Saludar, entender el motivo de consulta y pedir solo el dato inicial necesario.",
+  ],
+  [
+    "follow_up",
+    "Seguimiento",
+    "Retomar el contexto sin repetir todo y proponer un siguiente paso concreto.",
+  ],
+  [
+    "sales",
+    "Ventas",
+    "Detectar necesidad, presentar una opcion real y avanzar hacia una decision sin presionar.",
+  ],
+  [
+    "support",
+    "Soporte",
+    "Confirmar el problema, pedir datos esenciales y resolver o derivar con contexto.",
+  ],
+  [
+    "collections",
+    "Cobranza",
+    "Tratar pagos con respeto y derivar a humano antes de confirmar importes o acuerdos.",
+  ],
+  [
+    "scheduling",
+    "Agenda",
+    "Solicitar fecha, horario y datos necesarios antes de confirmar una cita.",
+  ],
+  [
+    "reservations",
+    "Reservas",
+    "Validar disponibilidad real y recopilar los datos requeridos para reservar.",
+  ],
+  [
+    "quote",
+    "Presupuesto",
+    "Reunir requisitos y generar un borrador si faltan precios o validacion humana.",
+  ],
+  [
+    "after_sales",
+    "Postventa",
+    "Consultar satisfaccion, resolver pendientes y registrar el seguimiento necesario.",
+  ],
 ] as const;
 
-export function AssistantForm({ assistant }: { assistant?: Assistant }) {
+export function AssistantForm({
+  assistant,
+  templateKey,
+}: {
+  assistant?: Assistant;
+  templateKey?: string;
+}) {
   const [step, setStep] = useState(0);
   const action = assistant ? updateAssistant : createAssistant;
-  const config = { ...defaultConfig, ...(assistant?.agent_config ?? {}) };
-  const savedPlaybooks = new Map((assistant?.playbooks ?? []).map((playbook) => [playbook.key, playbook]));
+  const template = getAssistantTemplate(templateKey);
+  const config = {
+    ...defaultConfig,
+    ...(template?.config ?? {}),
+    ...(assistant?.agent_config ?? {}),
+  };
+  const savedPlaybooks = new Map(
+    (assistant?.playbooks ?? []).map((playbook) => [playbook.key, playbook]),
+  );
 
   return (
     <form action={action} className="space-y-6">
-      {assistant ? <input type="hidden" name="id" value={assistant.id} /> : null}
+      {assistant ? (
+        <input type="hidden" name="id" value={assistant.id} />
+      ) : null}
+      {!assistant ? (
+        <div className="space-y-2 rounded-md border bg-muted/30 p-4">
+          <Label htmlFor="assistant-template">Plantilla inicial</Label>
+          <select
+            id="assistant-template"
+            defaultValue={templateKey ?? ""}
+            onChange={(event) => {
+              window.location.href = event.target.value
+                ? `/assistants/new?template=${event.target.value}`
+                : "/assistants/new";
+            }}
+            className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+          >
+            <option value="">Configuracion en blanco</option>
+            {assistantTemplates.map((item) => (
+              <option key={item.key} value={item.key}>
+                {item.name} - {item.description}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground">
+            La plantilla precarga rol, temas, capacidades y playbooks. Todo
+            queda editable.
+          </p>
+        </div>
+      ) : null}
 
-      <nav aria-label="Progreso de configuracion" className="grid grid-cols-3 gap-2 md:grid-cols-6">
+      <nav
+        aria-label="Progreso de configuracion"
+        className="grid grid-cols-3 gap-2 md:grid-cols-6"
+      >
         {steps.map((label, index) => (
           <button
             key={label}
@@ -91,106 +201,475 @@ export function AssistantForm({ assistant }: { assistant?: Assistant }) {
         ))}
       </nav>
 
-      <WizardSection active={step === 0} title="Contanos sobre tu empresa" description="Esta informacion ayuda al agente a entender a quien representa.">
+      <WizardSection
+        active={step === 0}
+        title="Contanos sobre tu empresa"
+        description="Esta informacion ayuda al agente a entender a quien representa."
+      >
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Nombre del agente" name="agent_name" defaultValue={config.agent_name} required />
-          <Field label="Cargo o rol" name="role" defaultValue={config.role} placeholder="Vendedor, soporte, recepcionista..." required />
-          <Field label="Rubro del negocio" name="industry" defaultValue={config.industry} placeholder="Inmobiliaria, automotriz, salud..." />
-          <Field label="Canal" name="channel_id" defaultValue={assistant?.channel_id ?? "whatsapp"} />
+          <Field
+            label="Nombre del agente"
+            name="agent_name"
+            defaultValue={config.agent_name}
+            required
+          />
+          <Field
+            label="Cargo o rol"
+            name="role"
+            defaultValue={config.role}
+            placeholder="Vendedor, soporte, recepcionista..."
+            required
+          />
+          <Field
+            label="Rubro del negocio"
+            name="industry"
+            defaultValue={config.industry}
+            placeholder="Inmobiliaria, automotriz, salud..."
+          />
+          <Field
+            label="Canal"
+            name="channel_id"
+            defaultValue={assistant?.channel_id ?? "whatsapp"}
+          />
         </div>
-        <TextArea label="Descripcion del negocio" name="business_description" defaultValue={config.business_description} rows={4} />
+        <TextArea
+          label="Descripcion del negocio"
+          name="business_description"
+          defaultValue={config.business_description}
+          rows={4}
+        />
       </WizardSection>
 
-      <WizardSection active={step === 1} title="¿Que ofrece tu empresa?" description="No hace falta escribir instrucciones tecnicas. Describe la oferta con palabras normales.">
-        <TextArea label="¿Que vende?" name="sells" defaultValue={config.sells} rows={3} />
-        <TextArea label="Servicios" name="services" defaultValue={config.services} rows={3} />
-        <TextArea label="Productos" name="products" defaultValue={config.products} rows={4} />
-        <TextArea label="Objetivo principal del agente" name="primary_goal" defaultValue={config.primary_goal} rows={3} required />
+      <WizardSection
+        active={step === 1}
+        title="¿Que ofrece tu empresa?"
+        description="No hace falta escribir instrucciones tecnicas. Describe la oferta con palabras normales."
+      >
+        <TextArea
+          label="¿Que vende?"
+          name="sells"
+          defaultValue={config.sells}
+          rows={3}
+        />
+        <TextArea
+          label="Servicios"
+          name="services"
+          defaultValue={config.services}
+          rows={3}
+        />
+        <TextArea
+          label="Productos"
+          name="products"
+          defaultValue={config.products}
+          rows={4}
+        />
+        <TextArea
+          label="Objetivo principal del agente"
+          name="primary_goal"
+          defaultValue={config.primary_goal}
+          rows={3}
+          required
+        />
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Intencion principal" name="primary_intent" defaultValue={config.primary_intent} placeholder="ventas, soporte, agenda, cotizaciones..." required />
-          <Field label="Prioridad de routing (0-100)" name="routing_priority" defaultValue={String(config.routing_priority)} required />
-          <TextArea label="Temas que atiende, uno por linea" name="topics" defaultValue={config.topics.join("\n")} rows={4} />
-          <TextArea label="Temas que no atiende" name="excluded_topics" defaultValue={config.excluded_topics.join("\n")} rows={4} />
-          <TextArea label="Categorias de conocimiento prioritarias" name="knowledge_categories" defaultValue={config.knowledge_categories.join("\n")} rows={4} />
-          <label className="flex items-center gap-2 rounded-md border p-3 text-sm"><input type="checkbox" name="is_default" defaultChecked={config.is_default} />Usar como asistente por defecto cuando no haya certeza</label>
+          <Field
+            label="Intencion principal"
+            name="primary_intent"
+            defaultValue={config.primary_intent}
+            placeholder="ventas, soporte, agenda, cotizaciones..."
+            required
+          />
+          <Field
+            label="Prioridad de routing (0-100)"
+            name="routing_priority"
+            defaultValue={String(config.routing_priority)}
+            required
+          />
+          <TextArea
+            label="Temas que atiende, uno por linea"
+            name="topics"
+            defaultValue={config.topics.join("\n")}
+            rows={4}
+          />
+          <TextArea
+            label="Temas que no atiende"
+            name="excluded_topics"
+            defaultValue={config.excluded_topics.join("\n")}
+            rows={4}
+          />
+          <TextArea
+            label="Categorias de conocimiento prioritarias"
+            name="knowledge_categories"
+            defaultValue={config.knowledge_categories.join("\n")}
+            rows={4}
+          />
+          <label className="flex items-center gap-2 rounded-md border p-3 text-sm">
+            <input
+              type="checkbox"
+              name="is_default"
+              defaultChecked={config.is_default}
+            />
+            Usar como asistente por defecto cuando no haya certeza
+          </label>
         </div>
       </WizardSection>
 
-      <WizardSection active={step === 2} title="¿Como queres que responda?" description="Elegí el estilo que mejor representa a tu equipo.">
-        <ChoiceGroup label="Nivel de formalidad" name="formality" value={config.formality} options={[["very_informal", "Muy informal"], ["close", "Cercano"], ["professional", "Profesional"], ["very_formal", "Muy formal"]]} />
-        <ChoiceGroup label="Longitud" name="response_length" value={config.response_length} options={[["very_short", "Muy cortas"], ["normal", "Normales"], ["detailed", "Detalladas"]]} />
-        <ChoiceGroup label="Uso de emojis" name="emoji_usage" value={config.emoji_usage} options={[["never", "Nunca"], ["low", "Poco"], ["normal", "Normal"], ["frequent", "Frecuente"]]} />
-        <ChoiceGroup label="Velocidad comercial" name="commercial_pace" value={config.commercial_pace} options={[["calm", "Muy tranquila"], ["consultative", "Consultiva"], ["commercial", "Comercial"], ["aggressive", "Muy activa"]]} />
-        <ChoiceGroup label="Tipo de comunicacion" name="communication_style" value={config.communication_style} options={[["friendly", "Amigable"], ["technical", "Tecnica"], ["executive", "Ejecutiva"], ["premium", "Premium"], ["youthful", "Juvenil"]]} />
+      <WizardSection
+        active={step === 2}
+        title="¿Como queres que responda?"
+        description="Elegí el estilo que mejor representa a tu equipo."
+      >
+        <ChoiceGroup
+          label="Nivel de formalidad"
+          name="formality"
+          value={config.formality}
+          options={[
+            ["very_informal", "Muy informal"],
+            ["close", "Cercano"],
+            ["professional", "Profesional"],
+            ["very_formal", "Muy formal"],
+          ]}
+        />
+        <ChoiceGroup
+          label="Longitud"
+          name="response_length"
+          value={config.response_length}
+          options={[
+            ["very_short", "Muy cortas"],
+            ["normal", "Normales"],
+            ["detailed", "Detalladas"],
+          ]}
+        />
+        <ChoiceGroup
+          label="Uso de emojis"
+          name="emoji_usage"
+          value={config.emoji_usage}
+          options={[
+            ["never", "Nunca"],
+            ["low", "Poco"],
+            ["normal", "Normal"],
+            ["frequent", "Frecuente"],
+          ]}
+        />
+        <ChoiceGroup
+          label="Velocidad comercial"
+          name="commercial_pace"
+          value={config.commercial_pace}
+          options={[
+            ["calm", "Muy tranquila"],
+            ["consultative", "Consultiva"],
+            ["commercial", "Comercial"],
+            ["aggressive", "Muy activa"],
+          ]}
+        />
+        <ChoiceGroup
+          label="Tipo de comunicacion"
+          name="communication_style"
+          value={config.communication_style}
+          options={[
+            ["friendly", "Amigable"],
+            ["technical", "Tecnica"],
+            ["executive", "Ejecutiva"],
+            ["premium", "Premium"],
+            ["youthful", "Juvenil"],
+          ]}
+        />
       </WizardSection>
 
-      <WizardSection active={step === 3} title="Prepara la Base de Conocimiento" description="Selecciona que informacion deberia conocer. Podras cargarla en el modulo existente de Base de conocimiento.">
-        <TextArea label="Informacion recomendada, una por linea" name="knowledge_topics" defaultValue={config.knowledge_topics.join("\n")} rows={8} />
+      <WizardSection
+        active={step === 3}
+        title="Prepara la Base de Conocimiento"
+        description="Selecciona que informacion deberia conocer. Podras cargarla en el modulo existente de Base de conocimiento."
+      >
+        <TextArea
+          label="Informacion recomendada, una por linea"
+          name="knowledge_topics"
+          defaultValue={config.knowledge_topics.join("\n")}
+          rows={8}
+        />
         <div className="rounded-md border bg-muted/30 p-4 text-sm text-muted-foreground">
-          Sugerencias: productos, servicios, preguntas frecuentes, politicas, garantias, catalogos, precios, horarios, inventario, procesos, documentos y URLs.
+          Sugerencias: productos, servicios, preguntas frecuentes, politicas,
+          garantias, catalogos, precios, horarios, inventario, procesos,
+          documentos y URLs.
         </div>
       </WizardSection>
 
-      <WizardSection active={step === 4} title="Comportamiento y playbooks" description="Estas reglas orientan al agente. No activan automatizaciones ni envios por si solas.">
+      <WizardSection
+        active={step === 4}
+        title="Comportamiento y playbooks"
+        description="Estas reglas orientan al agente. No activan automatizaciones ni envios por si solas."
+      >
+        <section className="space-y-4 rounded-md border p-4">
+          <div>
+            <h3 className="font-semibold">Capacidades comerciales</h3>
+            <p className="text-xs text-muted-foreground">
+              Los permisos del asistente no reemplazan los controles de
+              automatizacion, ventana WhatsApp ni modo de conversacion.
+            </p>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <Check
+              name="can_answer_prices"
+              label="Puede responder precios"
+              checked={config.can_answer_prices}
+            />
+            <Check
+              name="can_create_quotes"
+              label="Puede crear cotizaciones"
+              checked={config.can_create_quotes}
+            />
+            <Check
+              name="can_send_quotes"
+              label="Puede enviar cotizaciones"
+              checked={config.can_send_quotes}
+            />
+            <Check
+              name="quote_requires_human_approval"
+              label="Requiere aprobacion humana para cotizaciones"
+              checked={config.quote_requires_human_approval}
+            />
+            <Check
+              name="can_auto_send_simple_prices"
+              label="Puede autoenviar precios simples"
+              checked={config.can_auto_send_simple_prices}
+            />
+            <Check
+              name="can_auto_send_full_quotes"
+              label="Puede autoenviar cotizaciones completas"
+              checked={config.can_auto_send_full_quotes}
+            />
+            <Field
+              label="Monto maximo para autoenvio"
+              name="quote_auto_send_max_amount"
+              defaultValue={
+                config.quote_auto_send_max_amount === null
+                  ? ""
+                  : String(config.quote_auto_send_max_amount)
+              }
+              placeholder="Vacio: sin autoenvio por monto"
+            />
+            <Field
+              label="Moneda por defecto"
+              name="default_currency"
+              defaultValue={config.default_currency}
+              required
+            />
+            <div className="space-y-2">
+              <Label>Si falta precio</Label>
+              <select
+                name="missing_price_behavior"
+                defaultValue={config.missing_price_behavior}
+                className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+              >
+                <option value="human">Derivar a humano</option>
+                <option value="ask">Pedir confirmacion</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label>Si falta stock</Label>
+              <select
+                name="missing_stock_behavior"
+                defaultValue={config.missing_stock_behavior}
+                className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+              >
+                <option value="confirm">Pedir confirmacion</option>
+                <option value="human">Derivar a humano</option>
+              </select>
+            </div>
+            <TextArea
+              label="Categorias para cotizar, una por linea"
+              name="quote_knowledge_categories"
+              defaultValue={config.quote_knowledge_categories.join("\n")}
+              rows={4}
+            />
+            <TextArea
+              label="Condiciones comerciales por defecto"
+              name="default_commercial_terms"
+              defaultValue={config.default_commercial_terms}
+              rows={4}
+            />
+          </div>
+        </section>
         <div className="grid gap-4 md:grid-cols-2">
-          <TextArea label="Informacion que debe pedir, una por linea" name="always_ask" defaultValue={config.always_ask.join("\n")} rows={5} />
-          <TextArea label="Informacion que nunca debe inventar" name="never_invent" defaultValue={config.never_invent.join("\n")} rows={5} />
-          <TextArea label="Temas que requieren una persona" name="human_topics" defaultValue={config.human_topics.join("\n")} rows={5} />
-          <TextArea label="Cuando crear una tarea" name="create_task_when" defaultValue={config.create_task_when.join("\n")} rows={5} />
-          <TextArea label="Cuando crear una oportunidad" name="create_opportunity_when" defaultValue={config.create_opportunity_when.join("\n")} rows={5} />
-          <TextArea label="Cuando crear una cita" name="create_appointment_when" defaultValue={config.create_appointment_when.join("\n")} rows={5} />
-          <TextArea label="Cuando pausar la IA" name="pause_ai_when" defaultValue={config.pause_ai_when.join("\n")} rows={5} />
-          <TextArea label="Cuando puede responder automaticamente" name="auto_reply_when" defaultValue={config.auto_reply_when.join("\n")} rows={5} />
-          <TextArea label="Cuando generar solo borrador" name="draft_only_when" defaultValue={config.draft_only_when.join("\n")} rows={5} />
+          <TextArea
+            label="Informacion que debe pedir, una por linea"
+            name="always_ask"
+            defaultValue={config.always_ask.join("\n")}
+            rows={5}
+          />
+          <TextArea
+            label="Informacion que nunca debe inventar"
+            name="never_invent"
+            defaultValue={config.never_invent.join("\n")}
+            rows={5}
+          />
+          <TextArea
+            label="Temas que requieren una persona"
+            name="human_topics"
+            defaultValue={config.human_topics.join("\n")}
+            rows={5}
+          />
+          <TextArea
+            label="Cuando crear una tarea"
+            name="create_task_when"
+            defaultValue={config.create_task_when.join("\n")}
+            rows={5}
+          />
+          <TextArea
+            label="Cuando crear una oportunidad"
+            name="create_opportunity_when"
+            defaultValue={config.create_opportunity_when.join("\n")}
+            rows={5}
+          />
+          <TextArea
+            label="Cuando crear una cita"
+            name="create_appointment_when"
+            defaultValue={config.create_appointment_when.join("\n")}
+            rows={5}
+          />
+          <TextArea
+            label="Cuando pausar la IA"
+            name="pause_ai_when"
+            defaultValue={config.pause_ai_when.join("\n")}
+            rows={5}
+          />
+          <TextArea
+            label="Cuando puede responder automaticamente"
+            name="auto_reply_when"
+            defaultValue={config.auto_reply_when.join("\n")}
+            rows={5}
+          />
+          <TextArea
+            label="Cuando generar solo borrador"
+            name="draft_only_when"
+            defaultValue={config.draft_only_when.join("\n")}
+            rows={5}
+          />
         </div>
         <div className="space-y-3 border-t pt-5">
           <h3 className="text-sm font-semibold">Playbooks editables</h3>
           {playbookDefinitions.map(([key, name, instructions]) => {
             const saved = savedPlaybooks.get(key);
             return (
-              <div key={key} className="grid gap-3 rounded-md border p-3 md:grid-cols-[180px_1fr]">
+              <div
+                key={key}
+                className="grid gap-3 rounded-md border p-3 md:grid-cols-[180px_1fr]"
+              >
                 <label className="flex items-center gap-2 text-sm font-medium">
-                  <input type="checkbox" name={`playbook_${key}_enabled`} defaultChecked={saved?.enabled ?? ["first_contact", "follow_up", "sales"].includes(key)} />
+                  <input
+                    type="checkbox"
+                    name={`playbook_${key}_enabled`}
+                    defaultChecked={
+                      saved?.enabled ??
+                      (template
+                        ? template.playbookKeys.includes(key)
+                        : ["first_contact", "follow_up", "sales"].includes(key))
+                    }
+                  />
                   {name}
                 </label>
-                <textarea name={`playbook_${key}`} defaultValue={saved?.instructions ?? instructions} rows={2} className="w-full rounded-md border bg-background px-3 py-2 text-sm" />
+                <textarea
+                  name={`playbook_${key}`}
+                  defaultValue={saved?.instructions ?? instructions}
+                  rows={2}
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                />
               </div>
             );
           })}
         </div>
       </WizardSection>
 
-      <WizardSection active={step === 5} title="Revisa y guarda" description="El sistema generara internamente el contexto, las reglas y el estilo. El prompt tecnico no se muestra ni necesita editarse.">
+      <WizardSection
+        active={step === 5}
+        title="Revisa y guarda"
+        description="El sistema generara internamente el contexto, las reglas y el estilo. El prompt tecnico no se muestra ni necesita editarse."
+      >
         <div className="grid gap-3 md:grid-cols-3">
           <Summary label="Agente" value={config.agent_name} />
           <Summary label="Rol" value={config.role} />
           <Summary label="Rubro" value={config.industry || "General"} />
         </div>
-        <TextArea label="Mensaje cuando necesita ayuda humana" name="fallback_message" defaultValue={assistant?.fallback_message ?? "Gracias por escribir. Un asesor del equipo va a ayudarte en breve."} rows={3} required />
+        <div className="rounded-md border bg-muted/30 p-4 text-sm">
+          <p className="font-medium">Preview de comportamiento</p>
+          <p className="mt-2 text-muted-foreground">
+            {config.agent_name} actuara como {config.role} para{" "}
+            {config.primary_intent === "general"
+              ? "consultas generales"
+              : config.primary_intent}
+            .{" "}
+            {config.can_answer_prices
+              ? "Podra confirmar precios encontrados en el catalogo."
+              : "No confirmara precios."}{" "}
+            {config.can_create_quotes
+              ? "Podra preparar cotizaciones verificadas."
+              : "No creara cotizaciones."}{" "}
+            {config.quote_requires_human_approval && config.can_create_quotes
+              ? "Las dejara para aprobacion humana."
+              : "Aplicara los limites configurados antes de cualquier autoenvio."}
+          </p>
+        </div>
+        <TextArea
+          label="Mensaje cuando necesita ayuda humana"
+          name="fallback_message"
+          defaultValue={
+            assistant?.fallback_message ??
+            "Gracias por escribir. Un asesor del equipo va a ayudarte en breve."
+          }
+          rows={3}
+          required
+        />
         <div className="grid gap-3 md:grid-cols-2">
           <label className="flex items-center gap-2 rounded-md border p-3 text-sm">
-            <input name="active" type="checkbox" defaultChecked={assistant?.active ?? true} />
+            <input
+              name="active"
+              type="checkbox"
+              defaultChecked={assistant?.active ?? true}
+            />
             Asistente activo
           </label>
           <label className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
             <span className="flex items-center gap-2 font-medium">
-              <input name="auto_reply_enabled" type="checkbox" defaultChecked={assistant?.auto_reply_enabled ?? false} />
+              <input
+                name="auto_reply_enabled"
+                type="checkbox"
+                defaultChecked={assistant?.auto_reply_enabled ?? false}
+              />
               Permitir respuestas automaticas
             </span>
-            <span className="mt-1 block text-xs text-amber-800">Requiere automatizacion activa y conversacion en modo IA automatica.</span>
+            <span className="mt-1 block text-xs text-amber-800">
+              Requiere automatizacion activa y conversacion en modo IA
+              automatica.
+            </span>
           </label>
         </div>
-        <p className="text-sm text-muted-foreground">Despues de guardar podras probar una conversacion desde el detalle del asistente.</p>
-        <SubmitButton>{assistant ? "Guardar configuracion" : "Crear y probar asistente"}</SubmitButton>
+        <p className="text-sm text-muted-foreground">
+          Despues de guardar podras probar una conversacion desde el detalle del
+          asistente.
+        </p>
+        <SubmitButton>
+          {assistant ? "Guardar configuracion" : "Crear y probar asistente"}
+        </SubmitButton>
       </WizardSection>
 
       <div className="flex items-center justify-between border-t pt-4">
-        <Button type="button" variant="outline" disabled={step === 0} onClick={() => setStep((current) => Math.max(0, current - 1))}>
-          <ChevronLeft className="mr-2 size-4" />Anterior
+        <Button
+          type="button"
+          variant="outline"
+          disabled={step === 0}
+          onClick={() => setStep((current) => Math.max(0, current - 1))}
+        >
+          <ChevronLeft className="mr-2 size-4" />
+          Anterior
         </Button>
         {step < steps.length - 1 ? (
-          <Button type="button" onClick={() => setStep((current) => Math.min(steps.length - 1, current + 1))}>
-            Siguiente<ChevronRight className="ml-2 size-4" />
+          <Button
+            type="button"
+            onClick={() =>
+              setStep((current) => Math.min(steps.length - 1, current + 1))
+            }
+          >
+            Siguiente
+            <ChevronRight className="ml-2 size-4" />
           </Button>
         ) : null}
       </div>
@@ -198,22 +677,138 @@ export function AssistantForm({ assistant }: { assistant?: Assistant }) {
   );
 }
 
-function WizardSection({ active, title, description, children }: { active: boolean; title: string; description: string; children: React.ReactNode }) {
-  return <section className={active ? "space-y-5" : "hidden"}><div><h2 className="text-lg font-semibold">{title}</h2><p className="text-sm text-muted-foreground">{description}</p></div>{children}</section>;
+function WizardSection({
+  active,
+  title,
+  description,
+  children,
+}: {
+  active: boolean;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className={active ? "space-y-5" : "hidden"}>
+      <div>
+        <h2 className="text-lg font-semibold">{title}</h2>
+        <p className="text-sm text-muted-foreground">{description}</p>
+      </div>
+      {children}
+    </section>
+  );
 }
 
-function Field({ label, name, defaultValue, placeholder, required = false }: { label: string; name: string; defaultValue?: string | null; placeholder?: string; required?: boolean }) {
-  return <div className="space-y-2"><Label htmlFor={name}>{label}</Label><Input id={name} name={name} defaultValue={defaultValue ?? ""} placeholder={placeholder} required={required} /></div>;
+function Field({
+  label,
+  name,
+  defaultValue,
+  placeholder,
+  required = false,
+}: {
+  label: string;
+  name: string;
+  defaultValue?: string | null;
+  placeholder?: string;
+  required?: boolean;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>{label}</Label>
+      <Input
+        id={name}
+        name={name}
+        defaultValue={defaultValue ?? ""}
+        placeholder={placeholder}
+        required={required}
+      />
+    </div>
+  );
 }
 
-function TextArea({ label, name, defaultValue, rows, required = false }: { label: string; name: string; defaultValue?: string | null; rows: number; required?: boolean }) {
-  return <div className="space-y-2"><Label htmlFor={name}>{label}</Label><textarea id={name} name={name} defaultValue={defaultValue ?? ""} rows={rows} required={required} className="w-full rounded-md border bg-background px-3 py-2 text-sm" /></div>;
+function TextArea({
+  label,
+  name,
+  defaultValue,
+  rows,
+  required = false,
+}: {
+  label: string;
+  name: string;
+  defaultValue?: string | null;
+  rows: number;
+  required?: boolean;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>{label}</Label>
+      <textarea
+        id={name}
+        name={name}
+        defaultValue={defaultValue ?? ""}
+        rows={rows}
+        required={required}
+        className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+      />
+    </div>
+  );
 }
 
-function ChoiceGroup({ label, name, value, options }: { label: string; name: string; value: string; options: ReadonlyArray<readonly [string, string]> }) {
-  return <fieldset className="space-y-2"><legend className="text-sm font-medium">{label}</legend><div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{options.map(([optionValue, optionLabel]) => <label key={optionValue} className="flex min-h-10 items-center gap-2 rounded-md border px-3 text-sm"><input type="radio" name={name} value={optionValue} defaultChecked={value === optionValue} />{optionLabel}</label>)}</div></fieldset>;
+function ChoiceGroup({
+  label,
+  name,
+  value,
+  options,
+}: {
+  label: string;
+  name: string;
+  value: string;
+  options: ReadonlyArray<readonly [string, string]>;
+}) {
+  return (
+    <fieldset className="space-y-2">
+      <legend className="text-sm font-medium">{label}</legend>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        {options.map(([optionValue, optionLabel]) => (
+          <label
+            key={optionValue}
+            className="flex min-h-10 items-center gap-2 rounded-md border px-3 text-sm"
+          >
+            <input
+              type="radio"
+              name={name}
+              value={optionValue}
+              defaultChecked={value === optionValue}
+            />
+            {optionLabel}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
 }
 
 function Summary({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-md border p-3"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 text-sm font-medium">{value}</p></div>;
+  return (
+    <div className="rounded-md border p-3">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 text-sm font-medium">{value}</p>
+    </div>
+  );
+}
+function Check({
+  name,
+  label,
+  checked,
+}: {
+  name: string;
+  label: string;
+  checked: boolean;
+}) {
+  return (
+    <label className="flex items-center gap-2 rounded-md border p-3 text-sm">
+      <input type="checkbox" name={name} defaultChecked={checked} />
+      {label}
+    </label>
+  );
 }

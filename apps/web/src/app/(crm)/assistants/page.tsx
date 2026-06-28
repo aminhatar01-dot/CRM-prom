@@ -4,6 +4,7 @@ import { Button } from "@crm-pro-ai/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@crm-pro-ai/ui/card";
 import { requireUser } from "@/lib/auth";
 import { getActiveOrganization } from "@/lib/organization";
+import type { AgentConfig } from "@crm-pro-ai/ai/agent-config";
 
 type AssistantRow = {
   id: string;
@@ -13,6 +14,7 @@ type AssistantRow = {
   active: boolean;
   channel_id: string | null;
   created_at: string;
+  agent_config: AgentConfig | null;
 };
 
 export default async function AssistantsPage() {
@@ -20,7 +22,9 @@ export default async function AssistantsPage() {
   const organization = await getActiveOrganization(supabase, user);
   const { data: assistants } = await supabase
     .from("ai_assistants")
-    .select("id, name, description, tone, active, channel_id, created_at")
+    .select(
+      "id, name, description, tone, active, channel_id, created_at, agent_config",
+    )
     .eq("organization_id", organization.id)
     .is("archived_at", null)
     .order("created_at", { ascending: false })
@@ -30,8 +34,13 @@ export default async function AssistantsPage() {
     <section className="mx-auto max-w-6xl px-4 py-6 lg:px-6">
       <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-normal">Asistentes IA</h1>
-          <p className="text-sm text-muted-foreground">Define el negocio, personalidad y comportamiento del agente sin escribir prompts tecnicos.</p>
+          <h1 className="text-2xl font-semibold tracking-normal">
+            Asistentes IA
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Define el negocio, personalidad y comportamiento del agente sin
+            escribir prompts tecnicos.
+          </p>
         </div>
         <Button asChild>
           <Link href="/assistants/new">
@@ -50,11 +59,27 @@ export default async function AssistantsPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4 text-sm">
-              <p className="line-clamp-2 text-muted-foreground">{assistant.description ?? "Sin descripcion"}</p>
+              <p className="line-clamp-2 text-muted-foreground">
+                {assistant.description ?? "Sin descripcion"}
+              </p>
               <div className="flex flex-wrap gap-2 text-xs">
-                <span className="rounded-md border px-2 py-1">{assistant.tone}</span>
-                <span className="rounded-md border px-2 py-1">{assistant.channel_id ?? "todos"}</span>
-                <span className="rounded-md border px-2 py-1">{assistant.active ? "active" : "inactive"}</span>
+                <span className="rounded-md border px-2 py-1">
+                  {assistant.tone}
+                </span>
+                <span className="rounded-md border px-2 py-1">
+                  {assistant.channel_id ?? "todos"}
+                </span>
+                <span className="rounded-md border px-2 py-1">
+                  {assistant.active ? "active" : "inactive"}
+                </span>
+                {capabilityLabels(assistant.agent_config).map((capability) => (
+                  <span
+                    key={capability}
+                    className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-emerald-800"
+                  >
+                    {capability}
+                  </span>
+                ))}
               </div>
               <Button asChild variant="outline" className="w-full">
                 <Link href={`/assistants/${assistant.id}`}>Abrir</Link>
@@ -64,10 +89,21 @@ export default async function AssistantsPage() {
         ))}
         {assistants?.length === 0 ? (
           <Card>
-            <CardContent className="p-6 text-sm text-muted-foreground">Todavia no hay asistentes.</CardContent>
+            <CardContent className="p-6 text-sm text-muted-foreground">
+              Todavia no hay asistentes.
+            </CardContent>
           </Card>
         ) : null}
       </div>
     </section>
   );
+}
+
+function capabilityLabels(config: AgentConfig | null) {
+  if (!config) return [];
+  return [
+    config.can_answer_prices ? "Precios" : null,
+    config.can_create_quotes ? "Cotizaciones" : null,
+    config.can_send_quotes ? "Envio de cotizaciones" : null,
+  ].filter((item): item is string => Boolean(item));
 }

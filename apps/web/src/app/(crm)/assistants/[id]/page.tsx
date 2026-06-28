@@ -44,7 +44,7 @@ type ConversationOption = {
 
 export default async function AssistantDetailPage({
   params,
-  searchParams
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ test?: string; error?: string }>;
@@ -53,40 +53,50 @@ export default async function AssistantDetailPage({
   const query = await searchParams;
   const { supabase, user } = await requireUser();
   const organization = await getActiveOrganization(supabase, user);
-  const [{ data: assistant }, { data: tests }, { data: conversations }] = await Promise.all([
+  const [{ data: assistant }, { data: tests }, { data: conversations }] =
+    await Promise.all([
       supabase
-      .from("ai_assistants")
-      .select("id, name, description, objective, tone, rules, fallback_message, active, channel_id, auto_reply_enabled, agent_config, playbooks")
-      .eq("id", id)
-      .eq("organization_id", organization.id)
-      .is("archived_at", null)
-      .single<AssistantDetail>(),
-    supabase
-      .from("ai_assistant_tests")
-      .select("id, input, output, status, created_at, metadata")
-      .eq("assistant_id", id)
-      .eq("organization_id", organization.id)
-      .order("created_at", { ascending: false })
-      .limit(5)
-      .returns<AssistantTest[]>(),
-    supabase
-      .from("conversations")
-      .select("id, channel, status, contacts(first_name, last_name), leads(first_name, last_name)")
-      .eq("organization_id", organization.id)
-      .is("archived_at", null)
-      .order("updated_at", { ascending: false })
-      .limit(20)
-      .returns<ConversationOption[]>()
-  ]);
+        .from("ai_assistants")
+        .select(
+          "id, name, description, objective, tone, rules, fallback_message, active, channel_id, auto_reply_enabled, agent_config, playbooks",
+        )
+        .eq("id", id)
+        .eq("organization_id", organization.id)
+        .is("archived_at", null)
+        .single<AssistantDetail>(),
+      supabase
+        .from("ai_assistant_tests")
+        .select("id, input, output, status, created_at, metadata")
+        .eq("assistant_id", id)
+        .eq("organization_id", organization.id)
+        .order("created_at", { ascending: false })
+        .limit(5)
+        .returns<AssistantTest[]>(),
+      supabase
+        .from("conversations")
+        .select(
+          "id, channel, status, contacts(first_name, last_name), leads(first_name, last_name)",
+        )
+        .eq("organization_id", organization.id)
+        .is("archived_at", null)
+        .order("updated_at", { ascending: false })
+        .limit(20)
+        .returns<ConversationOption[]>(),
+    ]);
 
-  if (!assistant) return <section className="p-6">Asistente no encontrado.</section>;
+  if (!assistant)
+    return <section className="p-6">Asistente no encontrado.</section>;
 
   return (
     <section className="mx-auto max-w-6xl px-4 py-6 lg:px-6">
       <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-normal">{assistant.name}</h1>
-          <p className="text-sm text-muted-foreground">{assistant.description ?? "Sin descripcion"}</p>
+          <h1 className="text-2xl font-semibold tracking-normal">
+            {assistant.name}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {assistant.description ?? "Sin descripcion"}
+          </p>
         </div>
         <div className="flex gap-2">
           <Button asChild variant="outline">
@@ -110,20 +120,89 @@ export default async function AssistantDetailPage({
             <CardTitle>Configuracion</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
-            <Info label="Objetivo" value={assistant.objective ?? "Sin objetivo"} />
+            <Info
+              label="Objetivo"
+              value={assistant.objective ?? "Sin objetivo"}
+            />
             <Info label="Tono" value={assistant.tone} />
             <Info label="Canal" value={assistant.channel_id ?? "todos"} />
-            <Info label="Estado" value={assistant.active ? "active" : "inactive"} />
-            <Info label="Auto respuesta" value={assistant.auto_reply_enabled ? "habilitada" : "desactivada"} />
+            <Info
+              label="Estado"
+              value={assistant.active ? "active" : "inactive"}
+            />
+            <Info
+              label="Auto respuesta"
+              value={
+                assistant.auto_reply_enabled ? "habilitada" : "desactivada"
+              }
+            />
             <Info label="Fallback" value={assistant.fallback_message} />
-            <Info label="Rol" value={assistant.agent_config?.role ?? "Sin definir"} />
-            <Info label="Rubro" value={assistant.agent_config?.industry || "General"} />
-            <Info label="Intencion principal" value={assistant.agent_config?.primary_intent || "general"} />
-            <Info label="Temas" value={assistant.agent_config?.topics.join(", ") || "Consultas generales"} />
-            <Info label="Prioridad de routing" value={String(assistant.agent_config?.routing_priority ?? 50)} />
-            <Info label="Asistente por defecto" value={assistant.agent_config?.is_default ? "si" : "no"} />
-            <Info label="Estilo" value={assistant.agent_config?.communication_style ?? assistant.tone} />
-            <Info label="Playbooks activos" value={(assistant.playbooks ?? []).filter((item) => item.enabled).map((item) => item.name).join(", ") || "Sin playbooks"} />
+            <Info
+              label="Rol"
+              value={assistant.agent_config?.role ?? "Sin definir"}
+            />
+            <Info
+              label="Rubro"
+              value={assistant.agent_config?.industry || "General"}
+            />
+            <Info
+              label="Intencion principal"
+              value={assistant.agent_config?.primary_intent || "general"}
+            />
+            <Info
+              label="Temas"
+              value={
+                assistant.agent_config?.topics.join(", ") ||
+                "Consultas generales"
+              }
+            />
+            <Info
+              label="Prioridad de routing"
+              value={String(assistant.agent_config?.routing_priority ?? 50)}
+            />
+            <Info
+              label="Asistente por defecto"
+              value={assistant.agent_config?.is_default ? "si" : "no"}
+            />
+            <Info
+              label="Estilo"
+              value={
+                assistant.agent_config?.communication_style ?? assistant.tone
+              }
+            />
+            <Info
+              label="Playbooks activos"
+              value={
+                (assistant.playbooks ?? [])
+                  .filter((item) => item.enabled)
+                  .map((item) => item.name)
+                  .join(", ") || "Sin playbooks"
+              }
+            />
+            <Info
+              label="Capacidades"
+              value={
+                [
+                  assistant.agent_config?.can_answer_prices ? "precios" : null,
+                  assistant.agent_config?.can_create_quotes
+                    ? "crear cotizaciones"
+                    : null,
+                  assistant.agent_config?.can_send_quotes
+                    ? "enviar cotizaciones"
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(", ") || "Atencion conversacional"
+              }
+            />
+            <Info
+              label="Aprobacion de cotizaciones"
+              value={
+                assistant.agent_config?.quote_requires_human_approval
+                  ? "requerida"
+                  : "segun controles de autoenvio"
+              }
+            />
           </CardContent>
         </Card>
         <Card>
@@ -135,21 +214,39 @@ export default async function AssistantDetailPage({
               <input type="hidden" name="assistant_id" value={assistant.id} />
               <div className="space-y-2">
                 <Label htmlFor="conversation_id">Conversacion opcional</Label>
-                <select id="conversation_id" name="conversation_id" className="h-10 w-full rounded-md border bg-background px-3 text-sm">
+                <select
+                  id="conversation_id"
+                  name="conversation_id"
+                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                >
                   <option value="">Sin conversacion</option>
                   {(conversations ?? []).map((conversation) => (
                     <option key={conversation.id} value={conversation.id}>
-                      {conversationName(conversation)} - {conversation.channel}/{conversation.status}
+                      {conversationName(conversation)} - {conversation.channel}/
+                      {conversation.status}
                     </option>
                   ))}
                 </select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="input">Entrada de prueba</Label>
-                <Input id="input" name="input" placeholder="El cliente pregunta por precios..." required />
+                <Input
+                  id="input"
+                  name="input"
+                  placeholder="El cliente pregunta por precios..."
+                  required
+                />
               </div>
-              {query.error ? <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">No se pudo generar la prueba.</p> : null}
-              {query.test ? <p className="rounded-md bg-emerald-50 p-3 text-sm text-emerald-700">Prueba guardada.</p> : null}
+              {query.error ? (
+                <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">
+                  No se pudo generar la prueba.
+                </p>
+              ) : null}
+              {query.test ? (
+                <p className="rounded-md bg-emerald-50 p-3 text-sm text-emerald-700">
+                  Prueba guardada.
+                </p>
+              ) : null}
               <Button type="submit">
                 <Play className="size-4" />
                 Generar prueba
@@ -166,18 +263,28 @@ export default async function AssistantDetailPage({
           {(tests ?? []).map((test) => (
             <div key={test.id} className="rounded-md border p-3 text-sm">
               <p className="font-medium">{test.input}</p>
-              <p className="mt-2 text-muted-foreground">{test.output ?? "Sin salida"}</p>
+              <p className="mt-2 text-muted-foreground">
+                {test.output ?? "Sin salida"}
+              </p>
               {knowledgeSources(test.metadata).length > 0 ? (
                 <p className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
                   <BookOpen className="size-3" />
-                  {knowledgeSources(test.metadata).map((source) => source.title).join(", ")}
+                  {knowledgeSources(test.metadata)
+                    .map((source) => source.title)
+                    .join(", ")}
                 </p>
               ) : (
-                <p className="mt-2 text-xs text-amber-700">Sin informacion interna suficiente para esta prueba.</p>
+                <p className="mt-2 text-xs text-amber-700">
+                  Sin informacion interna suficiente para esta prueba.
+                </p>
               )}
             </div>
           ))}
-          {tests?.length === 0 ? <p className="text-sm text-muted-foreground">Todavia no hay pruebas.</p> : null}
+          {tests?.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Todavia no hay pruebas.
+            </p>
+          ) : null}
         </CardContent>
       </Card>
     </section>
@@ -195,7 +302,10 @@ function Info({ label, value }: { label: string; value: string }) {
 
 function conversationName(conversation: ConversationOption) {
   const person = conversation.contacts ?? conversation.leads;
-  return [person?.first_name, person?.last_name].filter(Boolean).join(" ") || "Conversacion";
+  return (
+    [person?.first_name, person?.last_name].filter(Boolean).join(" ") ||
+    "Conversacion"
+  );
 }
 
 function knowledgeSources(metadata: Record<string, unknown> | null) {
