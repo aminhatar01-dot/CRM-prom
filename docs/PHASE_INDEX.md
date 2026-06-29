@@ -194,11 +194,18 @@ Tests: 332+ passing (60+ archivos)
 
 ---
 
+### FASE 31 — Billing Foundation: Facturación SaaS inicial
+**Implementado:** 6 tablas billing (customers, subscriptions, invoices, payments, checkout_sessions, webhook_events), provider abstraction (manual/mercado_pago/stripe), SECURITY DEFINER functions para crear/pagar facturas idempotentemente y cargar créditos automáticamente. Webhooks MP y Stripe con validación de firma. UI admin `/admin/billing` con lista, nueva factura y detalle. UI cliente `/settings/billing`. Provider manual completamente funcional; MP y Stripe preparados sin requerir credenciales.  
+**Tests:** 45 contract tests  
+**Archivos clave:** `supabase/migrations/20260629120000_phase_31_billing_foundation.sql`, `apps/web/src/lib/billing/`, `apps/web/src/app/actions/billing.ts`, `apps/web/src/app/api/webhooks/billing/`, `docs/PHASE_31_BILLING_FOUNDATION.md`
+
+---
+
 ## Estado del proyecto
 
 | Métrica | Valor |
 |---|---|
-| Fases completadas | 30 |
+| Fases completadas | 31 |
 | Tests pasando | 332+ (60+ archivos) |
 | Build | ✅ OK |
 | Deploy check | 12 PASS, 2 WARN, 0 FAIL |
@@ -216,7 +223,7 @@ Tests: 332+ passing (60+ archivos)
 | Refresh automático de tokens OAuth | FASE 29 | ✅ Completado |
 | Panel admin interno | FASE 30 | ✅ Completado |
 | Planes SaaS completos | FASE 30 | ✅ Completado |
-| Billing automático (stripe/mercadopago) | FASE 31 | Pendiente |
+| Billing foundation (manual + MP/Stripe prep) | FASE 31 | ✅ Completado |
 | Alertas de producción (Slack/email para errores críticos) | FASE 31 | Pendiente |
 | Meta/MercadoLibre OAuth | FASE 31 | Pendiente |
 | Archivado de event_logs > 90 días | FASE 32 | Pendiente |
