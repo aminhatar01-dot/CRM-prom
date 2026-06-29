@@ -14,6 +14,8 @@ import { executeRealAutomationRun, sendDraft } from "@/lib/automation/real-engin
 import { actionErrorCode, addQueryParam } from "@/lib/action-errors";
 import { requireUser } from "@/lib/auth";
 import { getActiveOrganization } from "@/lib/organization";
+import { checkOrgLimit } from "@/lib/admin/plans";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 function value(formData: FormData, key: string) {
   const formValue = formData.get(key);
@@ -79,6 +81,21 @@ export async function createAutomationRule(formData: FormData) {
   const parsed = automationRuleSchema.safeParse(automationPayload(formData, organization.id));
 
   if (!parsed.success) redirect("/automations/new?error=invalid");
+
+  const { count: automationCount } = await supabase
+    .from("automation_rules")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", organization.id);
+
+  const limitCheck = await checkOrgLimit(
+    createAdminClient(),
+    organization.id,
+    "max_automations",
+    automationCount ?? 0,
+  );
+  if (!limitCheck.allowed) {
+    redirect(`/automations/new?error=plan_limit&limit=${limitCheck.limit}`);
+  }
 
   const { actions, ...rule } = parsed.data;
   const { data, error } = await supabase

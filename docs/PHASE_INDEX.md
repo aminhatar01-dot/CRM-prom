@@ -1,8 +1,8 @@
 # Índice de Fases — CRM PRO AI
 
-Estado al: 2026-06-28
+Estado al: 2026-06-29
 Rama activa: `feature/phase-26-ai-credits`
-Tests: 332 passing (60 archivos)
+Tests: 332+ passing (60+ archivos)
 
 ---
 
@@ -169,7 +169,7 @@ Tests: 332 passing (60 archivos)
 **Implementado:** 5 tablas nuevas (providers, connections, credentials, logs, hub_tools), 15 providers con 44 tools, `HubProvider` interface, `BaseHubProvider` con stubs, `executeHubTool()` multi-tenant, UI Hub con catálogo y conexiones activas, detalle de conexión con logs.  
 **Tests:** 41 contract tests  
 **Archivos clave:** `supabase/migrations/20260628170000_phase_27_integration_hub.sql`, `packages/integrations/src/provider-registry.ts`, `packages/integrations/src/hub-executor.ts`, `docs/PHASE_27_INTEGRATION_HUB.md`  
-**Pendiente:** FASE 29 implementará OAuth real y `executeTool()` reales.
+**Implementado en FASE 29:** OAuth real, providers reales de Google, ToolContext para credenciales server-side.
 
 ---
 
@@ -180,16 +180,30 @@ Tests: 332 passing (60 archivos)
 
 ---
 
+### FASE 29 — Google Workspace OAuth
+**Implementado:** OAuth per-org para Gmail, Google Calendar, Google Sheets, Google Drive. AES-256-GCM para tokens. CSRF via `oauth_states` con nonce 10min. `ToolContext` para inyección de credenciales server-side. Aprobación humana para herramientas destructivas. Providers reales reemplazando stubs.  
+**Tests:** 51 contract tests  
+**Archivos clave:** `supabase/migrations/20260628190000_phase_29_google_oauth.sql`, `packages/integrations/src/google/`, `apps/web/src/lib/integrations/credentials.ts`, `apps/web/src/app/api/integrations/google/`, `docs/PHASE_29_GOOGLE_OAUTH.md`
+
+---
+
+### FASE 30 — Panel Admin, Planes y Créditos
+**Implementado:** `platform_users` (super_admin), `admin_audit_log` append-only, 6 planes SaaS con slugs (free/demo/starter/pro/business/enterprise), `commercial_status` en subscriptions, SECURITY DEFINER functions para `admin_load_credits`/`admin_set_subscription`/`get_org_plan_limits`. UI `/admin` con 5 subrutas. Limit enforcement en `createAssistant` y `createAutomationRule`.  
+**Tests:** 40 contract tests  
+**Archivos clave:** `supabase/migrations/20260629000000_phase_30_admin_plans.sql`, `apps/web/src/lib/admin/`, `apps/web/src/app/actions/admin.ts`, `apps/web/src/app/admin/`, `docs/PHASE_30_ADMIN_PLANS_AND_CREDITS.md`
+
+---
+
 ## Estado del proyecto
 
 | Métrica | Valor |
 |---|---|
-| Fases completadas | 28 |
-| Tests pasando | 332 (60 archivos) |
+| Fases completadas | 30 |
+| Tests pasando | 332+ (60+ archivos) |
 | Build | ✅ OK |
 | Deploy check | 12 PASS, 2 WARN, 0 FAIL |
 | Rama activa | `feature/phase-26-ai-credits` |
-| Pendiente de PR | Sí (FASE 26 + 27 + 28) |
+| Pendiente de PR | Sí (FASE 26–30) |
 
 ---
 
@@ -197,12 +211,15 @@ Tests: 332 passing (60 archivos)
 
 | Item | Fase estimada | Estado |
 |---|---|---|
-| OAuth real por provider (Google, Meta, MercadoLibre) | FASE 29 | Pendiente |
-| `executeTool()` real en cada provider | FASE 29 | Pendiente |
-| Refresh automático de tokens OAuth | FASE 29 | Pendiente |
-| Billing automático (stripe/mercadopago) | FASE 30 | Pendiente |
+| OAuth real por provider (Google, Meta, MercadoLibre) | FASE 29 | ✅ Completado (Google) |
+| `executeTool()` real en cada provider | FASE 29 | ✅ Completado (Google) |
+| Refresh automático de tokens OAuth | FASE 29 | ✅ Completado |
+| Panel admin interno | FASE 30 | ✅ Completado |
+| Planes SaaS completos | FASE 30 | ✅ Completado |
+| Billing automático (stripe/mercadopago) | FASE 31 | Pendiente |
 | Alertas de producción (Slack/email para errores críticos) | FASE 31 | Pendiente |
-| Archivado de event_logs > 90 días | FASE 31 | Pendiente |
+| Meta/MercadoLibre OAuth | FASE 31 | Pendiente |
+| Archivado de event_logs > 90 días | FASE 32 | Pendiente |
 | Pruebas de carga | Pre-v1.0 | Pendiente |
 | Documentación de usuario final | Pre-v1.0 | Pendiente |
-| PR FASE 26+27+28 a main | Inmediato | Pendiente aprobación |
+| PR FASE 26–30 a main | Inmediato | Pendiente aprobación |

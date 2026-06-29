@@ -35,6 +35,8 @@ import {
 import { loadAvailableAITools } from "@/lib/ai/tools";
 import { selectAssistantForConversation } from "@/lib/ai/assistant-routing";
 import { getActiveOrganization } from "@/lib/organization";
+import { checkOrgLimit } from "@/lib/admin/plans";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const assistantIdSchema = z.object({
   id: z.string().uuid(),
@@ -155,6 +157,22 @@ export async function createAssistant(formData: FormData) {
 
   const { supabase, user } = await requireUser();
   const organization = await getActiveOrganization(supabase, user);
+
+  const { count: assistantCount } = await supabase
+    .from("ai_assistants")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", organization.id);
+
+  const limitCheck = await checkOrgLimit(
+    createAdminClient(),
+    organization.id,
+    "max_assistants",
+    assistantCount ?? 0,
+  );
+  if (!limitCheck.allowed) {
+    redirect(`/assistants/new?error=plan_limit&limit=${limitCheck.limit}`);
+  }
+
   const { data, error } = await supabase
     .from("ai_assistants")
     .insert({
