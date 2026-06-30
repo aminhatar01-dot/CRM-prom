@@ -333,7 +333,6 @@ set search_path = public
 as $$
 declare
   v_invoice        public.billing_invoices%rowtype;
-  v_plan           public.plans%rowtype;
   v_subscription   public.billing_subscriptions%rowtype;
   v_payment_id     uuid;
   v_credits        integer;
@@ -390,10 +389,13 @@ begin
   -- Get plan credits if subscription exists
   v_credits := 0;
   if v_invoice.billing_subscription_id is not null then
-    select bs.*, p.monthly_credits into v_subscription, v_credits
-    from public.billing_subscriptions bs
-    left join public.plans p on p.id = bs.plan_id
-    where bs.id = v_invoice.billing_subscription_id;
+    select * into v_subscription
+    from public.billing_subscriptions
+    where id = v_invoice.billing_subscription_id;
+
+    select coalesce(p.monthly_credits, 0) into v_credits
+    from public.plans p
+    where p.id = v_subscription.plan_id;
 
     v_credits := coalesce(v_credits, 0);
 
