@@ -54,7 +54,8 @@ function fakeSupabase() {
       return new FakeQuery(db, tableName);
     },
     // Stub rpc — allows all rate limit checks in tests
-    async rpc(_fn: string, _args?: unknown) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+    async rpc(..._args: any[]) {
       return { data: true, error: null };
     },
   } as unknown as SupabaseClient;
