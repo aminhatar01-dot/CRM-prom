@@ -1,5 +1,5 @@
 import { ToolExecutor, type ExecutableTool } from "@crm-pro-ai/integrations/tool-executor";
-import { checkIntegrationRateLimit } from "./rate-limit";
+import { checkDistributedRateLimit } from "../rate-limit/distributed";
 import type { requireUser } from "@/lib/auth";
 
 type SupabaseClient = Awaited<ReturnType<typeof requireUser>>["supabase"];
@@ -21,7 +21,8 @@ export async function runIntegrationTool({
   userId: string;
   input: Record<string, unknown>;
 }) {
-  if (!checkIntegrationRateLimit(organizationId)) {
+  const allowed = await checkDistributedRateLimit(supabase, organizationId, "integration_tools");
+  if (!allowed) {
     return { status: "failed" as const, error: "Rate limit exceeded", runId: undefined };
   }
 

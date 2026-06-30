@@ -34,7 +34,29 @@ export async function verifyMercadoPagoSignature(
 ): Promise<boolean> {
   if (!signature) return false;
   try {
-    const manifest = `id:${xRequestId};request-id:${xRequestId};ts:${Date.now()};`;
+    // Parse ts and v1 from x-signature header: "ts=1699994916,v1=<hex>"
+    const parts = Object.fromEntries(
+      signature.split(",").map((part) => {
+        const eqIdx = part.indexOf("=");
+        return [part.slice(0, eqIdx).trim(), part.slice(eqIdx + 1).trim()];
+      }),
+    );
+    const ts = parts["ts"];
+    const v1 = parts["v1"];
+    if (!ts || !v1) return false;
+
+    // Parse data.id from the notification body
+    let dataId = "";
+    try {
+      const body = JSON.parse(rawBody) as Record<string, unknown>;
+      const data = body.data as Record<string, unknown> | undefined;
+      dataId = String(data?.id ?? body.id ?? "");
+    } catch {
+      // keep empty — manifest still verifiable
+    }
+
+    // Manifest format per MP docs: id:{data.id};request-id:{x-request-id};ts:{ts};
+    const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
     const encoder = new TextEncoder();
     const key = await crypto.subtle.importKey(
       "raw",
@@ -47,8 +69,7 @@ export async function verifyMercadoPagoSignature(
     const expectedHex = Array.from(new Uint8Array(signatureBytes))
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
-    // MP signature format: ts=...v1=<hex>
-    return signature.includes(expectedHex);
+    return expectedHex === v1;
   } catch {
     return false;
   }

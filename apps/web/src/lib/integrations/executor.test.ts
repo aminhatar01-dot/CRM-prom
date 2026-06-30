@@ -52,7 +52,11 @@ function fakeSupabase() {
     __db: db,
     from(tableName: string) {
       return new FakeQuery(db, tableName);
-    }
+    },
+    // Stub rpc — allows all rate limit checks in tests
+    async rpc(_fn: string, _args?: unknown) {
+      return { data: true, error: null };
+    },
   } as unknown as SupabaseClient;
 }
 

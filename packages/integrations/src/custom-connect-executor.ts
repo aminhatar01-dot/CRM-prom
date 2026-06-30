@@ -1,4 +1,5 @@
 import type { CustomConnectTool } from "./tools";
+import { assertSafeUrl, MAX_SSRF_RESPONSE_BYTES } from "./ssrf-guard";
 
 export type CustomConnectExecution = {
   status: "success" | "failed";
@@ -29,6 +30,17 @@ export class CustomConnectExecutor {
       };
     }
 
+    // SSRF guard: validate URL before any network call
+    try {
+      await assertSafeUrl(tool.url);
+    } catch (error) {
+      return {
+        status: "failed",
+        error: error instanceof Error ? error.message : "URL no permitida.",
+        duration_ms: Date.now() - start
+      };
+    }
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), tool.timeout_ms);
 
@@ -40,9 +52,33 @@ export class CustomConnectExecutor {
           ...headersFromSchema(tool.headers_schema)
         },
         body: tool.method === "GET" ? undefined : JSON.stringify(input),
-        signal: controller.signal
+        signal: controller.signal,
+        redirect: "manual",
       });
-      const text = await response.text();
+
+      // Block redirects toward private networks
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get("location");
+        if (location) {
+          try {
+            await assertSafeUrl(location);
+          } catch {
+            return {
+              status: "failed",
+              error: "Redirect hacia destino no permitido.",
+              duration_ms: Date.now() - start
+            };
+          }
+        }
+        return {
+          status: "failed",
+          error: `Redirect HTTP ${response.status} no seguido.`,
+          duration_ms: Date.now() - start
+        };
+      }
+
+      const raw = await response.text();
+      const text = raw.slice(0, MAX_SSRF_RESPONSE_BYTES);
       const payload = parseMaybeJson(text);
 
       if (!response.ok) {

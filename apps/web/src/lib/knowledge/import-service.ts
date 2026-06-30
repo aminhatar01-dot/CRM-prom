@@ -44,6 +44,16 @@ export function validateKnowledgeFile(file: File, sourceType: string) {
   if (!allowed.includes(file.type)) throw new Error("El tipo MIME del archivo no esta permitido.");
   const expectedExtension = sourceType === "txt" ? ".txt" : `.${sourceType}`;
   if (!file.name.toLowerCase().endsWith(expectedExtension)) throw new Error("La extension no coincide con el tipo seleccionado.");
+  // Block filenames with path traversal or null bytes
+  if (/[\0/\\]/.test(file.name)) throw new Error("El nombre del archivo contiene caracteres no permitidos.");
+}
+
+export function sanitizeFileName(name: string): string {
+  return name
+    .replace(/[\0/\\:*?"<>|]/g, "_")
+    .replace(/\.{2,}/g, ".")
+    .slice(0, 200)
+    .trim() || "documento";
 }
 
 export async function processKnowledgeImport(importId: string, organizationId: string) {
@@ -250,19 +260,42 @@ export async function fetchPublicText(
 }
 
 async function assertPublicUrl(value: string, resolver: typeof lookup) {
-  const url = new URL(value);
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error("URL inválida.");
+  }
   if (!["http:", "https:"].includes(url.protocol)) throw new Error("Solo se permiten URLs HTTP o HTTPS.");
   if (url.username || url.password) throw new Error("No se permiten credenciales dentro de la URL.");
-  const addresses = isIP(url.hostname) ? [{ address: url.hostname }] : await resolver(url.hostname, { all: true });
+  if (!url.hostname) throw new Error("La URL debe tener un hostname válido.");
+  const addresses = isIP(url.hostname) !== 0
+    ? [{ address: url.hostname }]
+    : await resolver(url.hostname, { all: true }).catch(() => { throw new Error("No se pudo resolver el hostname."); });
+  if (addresses.length === 0) throw new Error("El hostname no resolvió ninguna IP.");
   if (addresses.some(({ address }) => isPrivateAddress(address))) throw new Error("La URL apunta a una red privada o local.");
   return url;
 }
 
 function isPrivateAddress(address: string) {
-  const normalized = address.toLowerCase();
-  return normalized === "::1" || normalized.startsWith("fe80:") || normalized.startsWith("fc") || normalized.startsWith("fd")
-    || /^127\./.test(normalized) || /^10\./.test(normalized) || /^192\.168\./.test(normalized)
-    || /^169\.254\./.test(normalized) || /^172\.(1[6-9]|2\d|3[01])\./.test(normalized) || normalized === "0.0.0.0";
+  const ip = address.toLowerCase().trim();
+  // IPv6
+  if (ip === "::1" || ip === "::" || ip === "0:0:0:0:0:0:0:1") return true;
+  if (ip.startsWith("fe80:")) return true;
+  if (ip.startsWith("fc") || ip.startsWith("fd")) return true;
+  const v4mapped = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+  if (v4mapped) return isPrivateAddress(v4mapped[1]);
+  // IPv4
+  if (ip === "0.0.0.0") return true;
+  if (/^0\./.test(ip)) return true;
+  if (/^127\./.test(ip)) return true;
+  if (/^10\./.test(ip)) return true;
+  if (/^192\.168\./.test(ip)) return true;
+  if (/^169\.254\./.test(ip)) return true;                            // link-local + cloud metadata
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(ip)) return true;
+  if (/^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(ip)) return true; // CGNAT
+  if (ip === "169.254.169.254" || ip === "100.100.100.200") return true;  // explicit IMDS
+  return false;
 }
 
 function safeError(error: unknown) {
