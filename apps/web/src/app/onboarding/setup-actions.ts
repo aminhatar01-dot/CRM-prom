@@ -114,7 +114,7 @@ export async function simulateOnboardingMessage(formData: FormData) {
 }
 
 export async function advanceOnboarding(formData: FormData) { const step = Math.max(1, Math.min(9, Number(value(formData,"next_step")) || 1)); const { supabase, organization } = await context(); await progress(supabase, organization.id, step, {}); redirect(`/onboarding?step=${step}`); }
-export async function finishOnboarding() { const { supabase, organization } = await context(); await progress(supabase, organization.id, 9, { completed_at: new Date().toISOString() }); revalidatePath("/dashboard"); redirect("/dashboard?setup=complete"); }
+export async function finishOnboarding() { const { supabase, organization } = await context(); const { getConsentStatus } = await import("@/app/actions/legal"); const consent = await getConsentStatus(); if (!consent.terms || !consent.privacy || !consent.data_processing) { redirect("/onboarding?step=9&error=consent_required"); } await progress(supabase, organization.id, 9, { completed_at: new Date().toISOString() }); revalidatePath("/dashboard"); redirect("/dashboard?setup=complete"); }
 
 function configValue(config: unknown, key: string) { return config && typeof config === "object" && key in config ? String((config as Record<string, unknown>)[key] ?? "") : ""; }
 function configList(config: unknown, key: string) { const item = config && typeof config === "object" ? (config as Record<string, unknown>)[key] : null; return Array.isArray(item) ? item.filter((value): value is string => typeof value === "string") : []; }

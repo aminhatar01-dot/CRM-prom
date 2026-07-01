@@ -27,6 +27,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <NavLink href="/admin/plans">Planes</NavLink>
           <NavLink href="/admin/credits">Créditos</NavLink>
           <NavLink href="/admin/billing">Facturación</NavLink>
+          <NavLink href="/admin/privacy">Privacidad</NavLink>
           <NavLink href="/admin/system">Sistema</NavLink>
         </nav>
         <main className="flex-1 p-6 overflow-auto">{children}</main>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { CookieBanner } from "@/components/cookie-banner";
 
 export const metadata: Metadata = {
   title: "CRM PRO AI",
@@ -13,7 +14,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <body>{children}</body>
+      <body>
+        {children}
+        <CookieBanner />
+      </body>
     </html>
   );
 }
