@@ -168,3 +168,215 @@ export async function getMyBillingStatus() {
     orgSubscription: orgSub ?? null,
   };
 }
+
+// ─── FASE 36: Self-service checkout ──────────────────────────────────────────
+
+import {
+  listCreditPackages,
+  listPublicPlans,
+  createCheckoutSession,
+  completeCheckoutSession,
+  createUpgradeRequest,
+  approveUpgradeRequest,
+  rejectUpgradeRequest,
+  listAllUpgradeRequests,
+  listOrgUpgradeRequests,
+  listAllCheckoutSessions,
+  listOrgCheckoutSessions,
+} from "@/lib/billing/checkout";
+import { logEvent } from "@/lib/observability/event-log";
+
+export async function getPlansAndCredits() {
+  const { supabase, user } = await requireUser();
+  const org = await getActiveOrganization(supabase, user);
+
+  const adminSupabase = createAdminClient();
+  const [plans, packages, upgradeRequests, checkoutSessions] = await Promise.all([
+    listPublicPlans(adminSupabase),
+    listCreditPackages(adminSupabase),
+    listOrgUpgradeRequests(adminSupabase, org.id),
+    listOrgCheckoutSessions(adminSupabase, org.id),
+  ]);
+
+  const { data: wallet } = await supabase
+    .from("ai_credit_wallets")
+    .select("available_credits, lifetime_credits_used")
+    .eq("organization_id", org.id)
+    .maybeSingle();
+
+  const { data: orgSub } = await supabase
+    .from("organization_subscriptions")
+    .select("status, commercial_status, current_period_end, plans(id, name, slug, monthly_credits, price_usd_monthly, price_usd_annual)")
+    .eq("organization_id", org.id)
+    .maybeSingle();
+
+  return {
+    plans,
+    packages,
+    upgradeRequests,
+    checkoutSessions,
+    wallet: wallet ?? null,
+    orgSubscription: orgSub ?? null,
+    orgId: org.id,
+  };
+}
+
+export async function requestPlanUpgrade(formData: FormData): Promise<{ checkoutUrl: string | null; provider: string; requestId: string }> {
+  const { supabase, user } = await requireUser();
+  const org = await getActiveOrganization(supabase, user);
+
+  const targetPlanId  = formData.get("plan_id") as string;
+  const billingCycle  = (formData.get("billing_cycle") as "monthly" | "annual") ?? "monthly";
+
+  if (!targetPlanId) throw new Error("Plan requerido");
+
+  const adminSupabase = createAdminClient();
+
+  // Get current plan id
+  const { data: orgSub } = await adminSupabase
+    .from("organization_subscriptions")
+    .select("plan_id")
+    .eq("organization_id", org.id)
+    .maybeSingle();
+
+  const currentPlanId = (orgSub as { plan_id?: string } | null)?.plan_id ?? null;
+
+  // Get target plan
+  const { data: plan } = await adminSupabase
+    .from("plans")
+    .select("id, name, slug, price_usd_monthly, price_usd_annual")
+    .eq("id", targetPlanId)
+    .single();
+
+  if (!plan) throw new Error("Plan no encontrado");
+
+  const typedPlan = plan as { id: string; name: string; slug: string; price_usd_monthly: number; price_usd_annual: number };
+  const priceUsd   = billingCycle === "annual" ? typedPlan.price_usd_annual : typedPlan.price_usd_monthly;
+  const amountCents = Math.round(priceUsd * 100);
+
+  // Check for existing pending request
+  const { data: existing } = await adminSupabase
+    .from("plan_upgrade_requests")
+    .select("id")
+    .eq("organization_id", org.id)
+    .eq("target_plan_id", targetPlanId)
+    .eq("status", "pending")
+    .maybeSingle();
+
+  if (existing) throw new Error("Ya tienes una solicitud pendiente para este plan");
+
+  const { checkoutUrl, sessionId, provider } = await createCheckoutSession(adminSupabase, {
+    orgId:        org.id,
+    sessionType:  "plan_upgrade",
+    planId:       targetPlanId,
+    amountCents:  amountCents > 0 ? amountCents : 0,
+    billingCycle,
+  } as Parameters<typeof createCheckoutSession>[1] & { billingCycle?: string });
+
+  const requestId = await createUpgradeRequest(
+    adminSupabase, org.id, user.id, targetPlanId, currentPlanId, billingCycle,
+  );
+
+  // Link session to request if created
+  if (sessionId) {
+    await adminSupabase
+      .from("plan_upgrade_requests")
+      .update({ checkout_session_id: sessionId, status: provider !== "manual" ? "checkout_pending" : "pending" })
+      .eq("id", requestId);
+  }
+
+  await logEvent(adminSupabase, {
+    eventType: "plan_upgrade_requested",
+    organizationId: org.id,
+    severity: "info",
+    source: "billing",
+    metadata: { target_plan: typedPlan.slug, billing_cycle: billingCycle, provider, user_id: user.id },
+  });
+
+  return { checkoutUrl, provider, requestId };
+}
+
+export async function purchaseCredits(formData: FormData): Promise<{ checkoutUrl: string | null; provider: string; sessionId: string }> {
+  const { supabase, user } = await requireUser();
+  const org = await getActiveOrganization(supabase, user);
+
+  const packageId = formData.get("package_id") as string;
+  if (!packageId) throw new Error("Paquete requerido");
+
+  const adminSupabase = createAdminClient();
+
+  const { data: pkg } = await adminSupabase
+    .from("credit_packages")
+    .select("*")
+    .eq("id", packageId)
+    .eq("enabled", true)
+    .single();
+
+  if (!pkg) throw new Error("Paquete no encontrado o deshabilitado");
+
+  const typedPkg = pkg as { id: string; name: string; credits: number; price_cents: number; currency: string };
+
+  const { checkoutUrl, sessionId, provider } = await createCheckoutSession(adminSupabase, {
+    orgId:         org.id,
+    sessionType:   "credit_purchase",
+    creditsAmount: typedPkg.credits,
+    amountCents:   typedPkg.price_cents,
+    currency:      typedPkg.currency,
+  });
+
+  await logEvent(adminSupabase, {
+    eventType: "credit_purchase_initiated",
+    organizationId: org.id,
+    severity: "info",
+    source: "billing",
+    metadata: { package: typedPkg.name, credits: typedPkg.credits, provider, user_id: user.id },
+  });
+
+  return { checkoutUrl, provider, sessionId };
+}
+
+// ─── Admin FASE 36 ────────────────────────────────────────────────────────────
+
+export async function adminGetCheckoutSessions() {
+  await requireSuperAdmin();
+  const adminSupabase = createAdminClient();
+  return listAllCheckoutSessions(adminSupabase);
+}
+
+export async function adminGetUpgradeRequests() {
+  await requireSuperAdmin();
+  const adminSupabase = createAdminClient();
+  return listAllUpgradeRequests(adminSupabase);
+}
+
+export async function adminApproveUpgradeRequest(formData: FormData) {
+  const { user } = await requireSuperAdmin();
+  const requestId = formData.get("request_id") as string;
+  if (!requestId) throw new Error("request_id required");
+
+  const adminSupabase = createAdminClient();
+  await approveUpgradeRequest(adminSupabase, requestId, user.id);
+  revalidatePath("/admin/billing");
+}
+
+export async function adminRejectUpgradeRequest(formData: FormData) {
+  await requireSuperAdmin();
+  const requestId = formData.get("request_id") as string;
+  const notes     = (formData.get("notes") as string) ?? "";
+  if (!requestId) throw new Error("request_id required");
+
+  const adminSupabase = createAdminClient();
+  await rejectUpgradeRequest(adminSupabase, requestId, notes);
+  revalidatePath("/admin/billing");
+}
+
+export async function adminCompleteCheckoutSession(formData: FormData) {
+  const { user } = await requireSuperAdmin();
+  const sessionId = formData.get("session_id") as string;
+  if (!sessionId) throw new Error("session_id required");
+
+  const adminSupabase = createAdminClient();
+  const result = await completeCheckoutSession(adminSupabase, sessionId, user.id);
+  revalidatePath("/admin/billing");
+  return result;
+}

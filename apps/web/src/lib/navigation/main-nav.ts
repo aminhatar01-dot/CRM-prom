@@ -28,6 +28,7 @@ export const mainNavigationItems = [
   { href: "/quotes", label: "Cotizaciones", icon: FileText, adminOnly: false },
   { href: "/settings/profile", label: "Mi perfil", icon: User, adminOnly: false },
   { href: "/settings/privacy", label: "Privacidad", icon: Shield, adminOnly: false },
+  { href: "/settings/plan", label: "Plan y suscripcion", icon: Sparkles, adminOnly: false },
   { href: "/assistants", label: "Asistentes", icon: Sparkles, adminOnly: true },
   { href: "/smart-tags", label: "Smart Tags", icon: Tags, adminOnly: true },
   { href: "/variables", label: "Variables", icon: Braces, adminOnly: true },

@@ -39,9 +39,14 @@ export default async function AdminBillingPage() {
       <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">Facturas ({invoices.length})</h2>
-          <Link href="/admin/billing/new" className="text-xs bg-blue-700 hover:bg-blue-600 text-white px-3 py-1.5 rounded font-medium">
-            + Nueva factura
-          </Link>
+          <div className="flex gap-2">
+            <Link href="/admin/billing/requests" className="text-xs bg-yellow-700 hover:bg-yellow-600 text-white px-3 py-1.5 rounded font-medium">
+              Solicitudes de upgrade
+            </Link>
+            <Link href="/admin/billing/new" className="text-xs bg-blue-700 hover:bg-blue-600 text-white px-3 py-1.5 rounded font-medium">
+              + Nueva factura
+            </Link>
+          </div>
         </div>
         <table className="w-full text-sm">
           <thead className="text-gray-400 text-xs uppercase bg-gray-900/50">
