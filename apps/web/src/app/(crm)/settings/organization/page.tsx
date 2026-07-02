@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { getActiveOrganization } from "@/lib/organization";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { canManageSettings } from "@/lib/permissions/roles";
 import { updateOrganization } from "@/app/actions/organization";
 
@@ -15,8 +14,9 @@ export default async function OrganizationPage({
 
   if (!canManageSettings(org.role)) redirect("/dashboard");
 
-  const admin = createAdminClient();
-  const { data: orgData } = await admin
+  // Use user's supabase client — RLS allows members to read their own org.
+  // Avoids createAdminClient() throwing if SUPABASE_SERVICE_ROLE_KEY is absent.
+  const { data: orgData } = await supabase
     .from("organizations")
     .select("id, name, description, business_type, country, currency, timezone, tax_id, fiscal_name, logo_url")
     .eq("id", org.id)

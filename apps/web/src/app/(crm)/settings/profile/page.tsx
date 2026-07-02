@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { updateProfile, changePassword } from "@/app/actions/profile";
 
 export default async function ProfilePage({
@@ -8,10 +7,11 @@ export default async function ProfilePage({
 }: {
   searchParams: Promise<Record<string, string>>;
 }) {
-  const { user } = await requireUser();
-  const admin = createAdminClient();
+  const { supabase, user } = await requireUser();
 
-  const { data: profile } = await admin
+  // Use user's supabase client — RLS allows users to read their own profile.
+  // Avoids createAdminClient() throwing if SUPABASE_SERVICE_ROLE_KEY is absent.
+  const { data: profile } = await supabase
     .from("profiles")
     .select("full_name, avatar_url, phone, job_title, preferred_language, timezone")
     .eq("id", user.id)
